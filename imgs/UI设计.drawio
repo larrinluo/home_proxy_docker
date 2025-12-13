@@ -1,6 +1,6 @@
 <mxfile host="65bd71144e">
     <diagram id="-5m55lDVz7_s4LQxxj5O" name="Page-1">
-        <mxGraphModel dx="2132" dy="1013" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
+        <mxGraphModel dx="1788" dy="1013" grid="1" gridSize="10" guides="1" tooltips="1" connect="1" arrows="1" fold="1" page="1" pageScale="1" pageWidth="827" pageHeight="1169" math="0" shadow="0">
             <root>
                 <mxCell id="0"/>
                 <mxCell id="1" parent="0"/>
@@ -65,13 +65,13 @@
                 </mxCell>
                 <mxCell id="89" style="edgeStyle=none;html=1;dashed=1;exitX=0.998;exitY=0.142;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="40">
                     <mxGeometry relative="1" as="geometry">
-                        <mxPoint x="1100" y="330" as="targetPoint"/>
+                        <mxPoint x="1080" y="330" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
                 <mxCell id="40" value="&lt;div&gt;&amp;nbsp; // Proxy Auto-Config (PAC) file&lt;/div&gt;&lt;div&gt;&amp;nbsp; // 配置规则：&lt;/div&gt;&lt;div&gt;&amp;nbsp; // - google.com, youtube.com, chatgpt.com 走 192.168.1.4:2081 代理&lt;/div&gt;&lt;div&gt;&amp;nbsp; // - 其他网站直连&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&amp;nbsp; function FindProxyForURL(url, host) {&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; // 定义代理服务器&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; var proxy = &quot;SOCKS5 192.168.1.4:2081; SOCKS 192.168.2.1:2081&quot;;&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; // 将域名转换为小写&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; host = host.toLowerCase();&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; url = url.toLowerCase();&lt;/div&gt;&lt;div&gt;&lt;br&gt;&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; // 需要代理的域名列表&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; var proxyDomains = [&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;google.com&quot;,&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;google.co.in&quot;,&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;google.co.jp&quot;,&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;google.co.uk&quot;,&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &amp;nbsp; &quot;google.cn&quot;,&lt;/div&gt;&lt;div&gt;&amp;nbsp; &amp;nbsp; ...&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;&lt;div&gt;&lt;/div&gt;" style="rounded=0;whiteSpace=wrap;html=1;fontSize=13;align=left;" parent="1" vertex="1">
                     <mxGeometry x="530" y="280" width="500" height="353" as="geometry"/>
                 </mxCell>
-                <mxCell id="38" value="PAC配置预览" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontStyle=5" parent="1" vertex="1">
+                <mxCell id="38" value="PAC配置预览" style="text;html=1;strokeColor=#666666;fillColor=#f5f5f5;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontStyle=1;fontColor=#3399FF;" parent="1" vertex="1">
                     <mxGeometry x="530" y="241" width="86" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="42" value="V" style="text;html=1;strokeColor=#666666;fillColor=#f5f5f5;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;fontColor=#333333;" parent="1" vertex="1">
@@ -85,17 +85,14 @@
                         <mxPoint x="1080" y="255" as="targetPoint"/>
                     </mxGeometry>
                 </mxCell>
-                <mxCell id="45" value="默认配置-Host配置 x" style="text;html=1;strokeColor=none;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
-                    <mxGeometry x="630" y="240" width="130" height="30" as="geometry"/>
+                <mxCell id="45" value="Host配置 - 默认配置&amp;nbsp; &amp;nbsp;&lt;font color=&quot;#b3b3b3&quot;&gt;x&lt;/font&gt;" style="text;html=1;strokeColor=default;fillColor=none;align=center;verticalAlign=middle;whiteSpace=wrap;rounded=0;fontSize=13;" parent="1" vertex="1">
+                    <mxGeometry x="616" y="241" width="144" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="47" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=default;fontSize=13;" parent="1" vertex="1">
                     <mxGeometry x="240" y="190" width="790" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="48" value="基于SSH跳板服务的Socks代理" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;" parent="1" vertex="1">
                     <mxGeometry x="241" y="195" width="200" height="30" as="geometry"/>
-                </mxCell>
-                <mxCell id="49" value="代理服务地址：192.168.1.4（可编辑）" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;" parent="1" vertex="1">
-                    <mxGeometry x="590" y="140" width="250" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="50" value="" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=default;fontSize=13;" parent="1" vertex="1">
                     <mxGeometry x="125" y="700" width="120" height="90" as="geometry"/>
@@ -135,8 +132,8 @@
                 <mxCell id="68" value="只有一个代理服务是不显示" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;fontColor=#000000;" parent="1" vertex="1">
                     <mxGeometry x="319" y="703" width="180" height="30" as="geometry"/>
                 </mxCell>
-                <mxCell id="72" value="Tab" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
-                    <mxGeometry x="1080" y="241" width="40" height="30" as="geometry"/>
+                <mxCell id="72" value="Tab标签页，根据用户操作打开、关闭" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="1080" y="241" width="230" height="30" as="geometry"/>
                 </mxCell>
                 <mxCell id="74" style="edgeStyle=none;html=1;dashed=1;entryX=0.5;entryY=1;entryDx=0;entryDy=0;" edge="1" parent="1" source="73" target="78">
                     <mxGeometry relative="1" as="geometry">
@@ -152,7 +149,7 @@
                 <mxCell id="80" value="代理服务xxx&lt;br&gt;&lt;br&gt;新建代理服务" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
                     <mxGeometry x="720" y="688" width="100" height="60" as="geometry"/>
                 </mxCell>
-                <mxCell id="81" value="&lt;span style=&quot;font-size: 12px;&quot;&gt;&amp;nbsp; 停止/启动&lt;/span&gt;&lt;br style=&quot;border-color: rgb(218, 220, 224); font-size: 12px;&quot;&gt;&lt;br style=&quot;border-color: rgb(218, 220, 224); font-size: 12px;&quot;&gt;&lt;span style=&quot;font-size: 12px;&quot;&gt;&amp;nbsp; 擅长代理&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=default;fontSize=13;align=left;" vertex="1" parent="1">
+                <mxCell id="81" value="&lt;span style=&quot;font-size: 12px;&quot;&gt;&amp;nbsp; 停止/启动&lt;/span&gt;&lt;br style=&quot;border-color: rgb(218, 220, 224); font-size: 12px;&quot;&gt;&lt;br style=&quot;border-color: rgb(218, 220, 224); font-size: 12px;&quot;&gt;&lt;span style=&quot;font-size: 12px;&quot;&gt;&amp;nbsp; 删除代理服务&lt;/span&gt;" style="rounded=0;whiteSpace=wrap;html=1;strokeColor=default;fontSize=13;align=left;" vertex="1" parent="1">
                     <mxGeometry x="490" y="20" width="120" height="60" as="geometry"/>
                 </mxCell>
                 <mxCell id="82" style="edgeStyle=none;html=1;dashed=1;entryX=0.558;entryY=1.033;entryDx=0;entryDy=0;entryPerimeter=0;exitX=1;exitY=0.25;exitDx=0;exitDy=0;" edge="1" parent="1" source="42" target="81">
@@ -170,13 +167,51 @@
                     <mxGeometry x="-130" y="390" width="160" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="86" value="第一个代理配置创建前&lt;br&gt;显示一个空白配置引导&lt;br&gt;用户建立第一个配置，&lt;br&gt;名字就叫『默认配置』" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
-                    <mxGeometry x="-130" y="176" width="160" height="80" as="geometry"/>
+                    <mxGeometry x="-130" y="216" width="160" height="80" as="geometry"/>
                 </mxCell>
                 <mxCell id="87" value="第一个代理配置给用户&lt;br&gt;内置一个模板" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;fontColor=#000000;" vertex="1" parent="1">
                     <mxGeometry x="-130" y="316" width="160" height="40" as="geometry"/>
                 </mxCell>
                 <mxCell id="91" value="正确配置代理服务器，用红色显示配置&lt;br&gt;中的代理服务信息，提示用户配置不完整" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
-                    <mxGeometry x="1110" y="316" width="240" height="40" as="geometry"/>
+                    <mxGeometry x="1090" y="316" width="240" height="40" as="geometry"/>
+                </mxCell>
+                <mxCell id="93" style="edgeStyle=none;html=1;dashed=1;" edge="1" parent="1" source="92">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="1080" y="210" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="92" value="代理服务地址：http://192.168.1.4:8090/proxy.pac（可编辑）" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;" vertex="1" parent="1">
+                    <mxGeometry x="640" y="195" width="380" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="94" value="正式启动前代理服务配置前需要正确设置&lt;br&gt;1. 如果8090端口不可用，需要提示用户输入&lt;br&gt;2. IP最好在back-end中通过用户链接访问的IP自动获取&lt;br&gt;3. 如果地址有为正确配置，显示红色提醒用户" style="text;html=1;align=left;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="1090" y="160" width="320" height="70" as="geometry"/>
+                </mxCell>
+                <mxCell id="95" value="" style="endArrow=classic;html=1;dashed=1;exitX=0;exitY=0.75;exitDx=0;exitDy=0;" edge="1" parent="1" source="78">
+                    <mxGeometry width="50" height="50" relative="1" as="geometry">
+                        <mxPoint x="480" y="430" as="sourcePoint"/>
+                        <mxPoint x="260" y="65" as="targetPoint"/>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="97" value="在弹出窗口中创建代理服务" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="50" width="170" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="98" value="点击显示pop菜单" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="105" y="658" width="120" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="99" style="edgeStyle=none;html=1;dashed=1;exitX=1;exitY=0.467;exitDx=0;exitDy=0;exitPerimeter=0;" edge="1" parent="1" source="34">
+                    <mxGeometry relative="1" as="geometry">
+                        <mxPoint x="640" y="80" as="targetPoint"/>
+                        <mxPoint x="510" y="313.5" as="sourcePoint"/>
+                        <Array as="points">
+                            <mxPoint x="540" y="200"/>
+                        </Array>
+                    </mxGeometry>
+                </mxCell>
+                <mxCell id="100" value="点击打开『Host配置 - 默认配置』标签" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;" vertex="1" parent="1">
+                    <mxGeometry x="617" y="50" width="230" height="30" as="geometry"/>
+                </mxCell>
+                <mxCell id="101" value="其他模块 - 占位" style="text;html=1;align=center;verticalAlign=middle;resizable=0;points=[];autosize=1;strokeColor=none;fillColor=none;fontSize=13;fontColor=#B3B3B3;" vertex="1" parent="1">
+                    <mxGeometry x="90" y="220" width="110" height="30" as="geometry"/>
                 </mxCell>
             </root>
         </mxGraphModel>
