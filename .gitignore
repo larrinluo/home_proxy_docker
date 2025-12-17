@@ -1,18 +1,27 @@
-# Node.js
+# Dependencies
 node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
 package-lock.json
-yarn.lock
-.pnp
-.pnp.js
 
-# Vue.js / Frontend
+# Build outputs
 dist/
 build/
-*.local
-.DS_Store
+*.log
+
+# Database files
+*.db
+*.sqlite
+*.sqlite3
+data/database.db
+data/test-database.db
+server/back-end/data/database.db
+server/back-end/data/test-database.db
+
+# SSH keys
+server/back-end/data/ssh-keys/
+*.pem
+*.key
+*.pub
+!*.pub.example
 
 # Environment variables
 .env
@@ -25,34 +34,59 @@ build/
 *.swp
 *.swo
 *~
-.project
-.classpath
-.settings/
-
-# Docker
-*.log
-docker-compose.override.yml
 
 # OS
 .DS_Store
 Thumbs.db
 
-# Python (if any)
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
-ENV/
+# Coverage reports
+coverage/
+*.lcov
+.nyc_output/
 
-# Build artifacts
-*.tar.gz
-*.zip
+# Test reports
+reports/test-report.html
+reports/test-report.json
 
 # Temporary files
 tmp/
 temp/
 *.tmp
 
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Docker
+docker-compose.override.yml
+
+server/front-end/dist/index.html
+server/front-end/dist/assets/_plugin-vue_export-helper-DlAUqK2U.js
+server/front-end/dist/assets/_plugin-vue_export-helper-DlAUqK2U.js.map
+server/front-end/dist/assets/Dashboard-DpryvRyP.css
+server/front-end/dist/assets/Dashboard-uv49sfxC.js
+server/front-end/dist/assets/Dashboard-uv49sfxC.js.map
+server/front-end/dist/assets/index-BAyvp1nm.css
+server/front-end/dist/assets/index-v6ciEjmk.js
+server/front-end/dist/assets/index-v6ciEjmk.js.map
+server/front-end/dist/assets/Login-C0JPjfGd.css
+server/front-end/dist/assets/Login-XZgBGlzb.js
+server/front-end/dist/assets/Login-XZgBGlzb.js.map
+server/front-end/dist/assets/Main-BEEhe-Kg.css
+server/front-end/dist/assets/Main-bfRHEVz3.js
+server/front-end/dist/assets/Main-bfRHEVz3.js.map
+server/front-end/dist/assets/Profile-BiKsbFgz.css
+server/front-end/dist/assets/Profile-DE9Zva7D.js
+server/front-end/dist/assets/Profile-DE9Zva7D.js.map
+server/front-end/dist/assets/Register-DmkLicE-.js
+server/front-end/dist/assets/Register-DmkLicE-.js.map
+server/front-end/dist/assets/Register-fp9m1lRT.css
+server/front-end/dist/assets/system-configs-DvebSRnr.js
+server/front-end/dist/assets/system-configs-DvebSRnr.js.map
+server/front-end/dist/assets/SystemConfig-2hm4GeaM.css
+server/front-end/dist/assets/SystemConfig-B_GWgEwM.js
+server/front-end/dist/assets/SystemConfig-B_GWgEwM.js.map
+server/front-end/dist/data/default-hosts.json

@@ -1,0 +1,25 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" width="64" height="64">
+  <!-- 背景圆形 -->
+  <circle cx="32" cy="32" r="30" fill="#2196f3" stroke="#1976d2" stroke-width="2"/>
+  
+  <!-- 左侧客户端节点 -->
+  <circle cx="16" cy="32" r="5" fill="#ffffff"/>
+  <circle cx="16" cy="32" r="3" fill="#2196f3"/>
+  
+  <!-- 中间代理服务器（更大的节点，表示中转） -->
+  <circle cx="32" cy="32" r="8" fill="#ffffff"/>
+  <circle cx="32" cy="32" r="6" fill="#2196f3"/>
+  <!-- 代理服务器内部图标：两个箭头表示转发 -->
+  <path d="M 28 30 L 32 28 L 36 30 M 28 34 L 32 36 L 36 34" stroke="#ffffff" stroke-width="1.5" fill="none" stroke-linecap="round"/>
+  
+  <!-- 右侧目标服务器节点 -->
+  <circle cx="48" cy="32" r="5" fill="#ffffff"/>
+  <circle cx="48" cy="32" r="3" fill="#2196f3"/>
+  
+  <!-- 连接线（带箭头表示数据流） -->
+  <path d="M 21 32 L 24 32" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <path d="M 40 32 L 43 32" stroke="#ffffff" stroke-width="2" fill="none" stroke-linecap="round"/>
+  <!-- 箭头 -->
+  <path d="M 24 32 L 20 30 L 20 34 Z" fill="#ffffff"/>
+  <path d="M 43 32 L 47 30 L 47 34 Z" fill="#ffffff"/>
+</svg>
