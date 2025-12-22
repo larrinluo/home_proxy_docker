@@ -11,8 +11,9 @@ export function getPACConfig() {
 export function getPACFile() {
   // PAC文件返回的是纯文本，不是JSON格式
   // /proxy.pac 在根路径，不在 /api 下，所以需要单独处理
+  // 在Docker容器中，使用相对路径让nginx代理
   const API_BASE_URL = import.meta.env.PROD 
-    ? (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000')
+    ? (import.meta.env.VITE_API_BASE_URL || '')
     : ''; // 开发环境使用相对路径，通过Vite proxy转发
   
   return axios({

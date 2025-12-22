@@ -6,15 +6,20 @@ import router from '../router';
 // 优先使用环境变量，如果没有则使用默认值
 // 如果前端和后端不在同一服务器，需要设置 VITE_API_BASE_URL 环境变量
 // 开发环境：使用相对路径，让Vite的proxy处理（避免跨域和cookie问题）
-// 生产环境：使用完整URL
+// 生产环境：在Docker容器中，前端和后端在同一容器，使用相对路径 /api 让nginx代理
+// 如果设置了 VITE_API_BASE_URL，则使用该值（用于前后端分离部署）
 const API_BASE_URL = import.meta.env.PROD 
-  ? (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000')
+  ? (import.meta.env.VITE_API_BASE_URL || '/api')
   : '/api'; // 开发环境使用相对路径，通过Vite proxy转发
 
 const request = axios.create({
   baseURL: API_BASE_URL,
   timeout: 30000,
-  withCredentials: true // 支持cookie
+  withCredentials: true, // 支持cookie
+  validateStatus: function (status) {
+    // 接受 200-299 范围内的状态码为成功（包括 201 Created）
+    return status >= 200 && status < 300;
+  }
 });
 
 // 请求拦截器

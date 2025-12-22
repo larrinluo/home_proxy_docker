@@ -1,0 +1,104 @@
+# Node.js
+node_modules
+npm-debug.log
+npm-error.log
+yarn-error.log
+package-lock.json
+yarn.lock
+
+# Git
+.git
+.gitignore
+.gitattributes
+
+# Environment files
+.env
+.env.local
+.env.*.local
+
+# Documentation
+*.md
+docs/
+README.md
+CHANGELOG.md
+
+# Images and diagrams
+*.png
+*.jpg
+*.jpeg
+*.gif
+*.svg
+*.drawio
+imgs/
+docs/image/
+
+# IDE and editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Test files
+coverage/
+*.test.js
+*.spec.js
+tests/
+__tests__/
+jest.config.js
+playwright.config.js
+vitest.config.js
+
+# Reports
+reports/
+*.html
+*.json
+test-report.*
+
+# Build artifacts (will be built in Docker)
+server/front-end/dist/
+server/front-end/node_modules/
+
+# Data files (should be mounted as volumes)
+data/
+*.db
+*.db-journal
+
+# Logs
+*.log
+logs/
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Scripts (keep only necessary ones)
+scripts/extract-test-code.js
+scripts/generate-test-report*.js
+scripts/parse-test-results.js
+
+# Migration files (keep migrations directory but exclude test migrations)
+migrations/*.test.sql
+
+# Backup files
+backups/
+*.backup
+*.bak
+
+# Docker files (exclude to avoid recursion)
+Dockerfile.dev
+docker-compose.dev.yml
+.dockerignore
+
+# CI/CD
+.github/
+.gitlab-ci.yml
+.travis.yml
+
+# Other
+.cursor/
+.spec-workflow/
+
+

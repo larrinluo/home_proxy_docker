@@ -7,7 +7,7 @@ require('dotenv').config();
 
 const execAsync = promisify(exec);
 
-const SSH_KEYS_DIR = process.env.SSH_KEYS_DIR || './data/ssh-keys';
+const SSH_KEYS_DIR = process.env.SSH_KEYS_DIR || '/data/ssh-keys';
 
 /**
  * SSH服务

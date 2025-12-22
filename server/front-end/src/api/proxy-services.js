@@ -57,9 +57,9 @@ export function stopProxyService(id) {
  */
 export function connectProxyService(data, onLog, onComplete, onError, onReaderReady) {
   return new Promise((resolve, reject) => {
-    // 开发环境使用相对路径，生产环境使用完整URL
+    // 开发环境使用相对路径，生产环境在Docker容器中使用相对路径让nginx代理
     const API_BASE_URL = import.meta.env.PROD 
-      ? (import.meta.env.VITE_API_BASE_URL || 'http://localhost:3000')
+      ? (import.meta.env.VITE_API_BASE_URL || '')
       : '';
     const url = `${API_BASE_URL}/api/v1/proxy-services/connect`;
     

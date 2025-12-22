@@ -3,7 +3,7 @@ const ProxyServiceModel = require('../db/models/proxy-services');
 require('dotenv').config();
 
 const PROXY_PORT_START = parseInt(process.env.PROXY_PORT_START) || 11081;
-const PROXY_PORT_END = parseInt(process.env.PROXY_PORT_END) || 11082;
+const PROXY_PORT_END = parseInt(process.env.PROXY_PORT_END) || 11083;
 
 /**
  * 端口管理器
@@ -81,6 +81,7 @@ class PortManager {
 }
 
 module.exports = new PortManager();
+
 
 
 

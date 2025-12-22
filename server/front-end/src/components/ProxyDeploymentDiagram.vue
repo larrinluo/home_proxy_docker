@@ -177,19 +177,21 @@ async function renderDiagram() {
       ? services.filter(s => s.id === props.serviceId)
       : services;
     
-    if (filteredServices.length === 0) {
-      if (diagramContainer.value) {
-        diagramContainer.value.innerHTML = '<div class="empty-state">暂无代理服务</div>';
-      }
-      return;
-    }
-
+    // 即使没有代理服务，也显示配置图框架（至少显示 PAC 服务节点和配置节点）
     // 保存数据以便在点击事件中使用
     servicesData.value = filteredServices;
     configsData.value = configs;
     
-    // 构建节点和边的数据
+    // 构建节点和边的数据（即使没有服务，也会显示 PAC 和配置节点）
     const { nodes, edges } = buildDiagramData(filteredServices, configs);
+    
+    // 如果没有节点（既没有服务也没有配置），显示提示信息
+    if (nodes.length === 0) {
+      if (diagramContainer.value) {
+        diagramContainer.value.innerHTML = '<div class="empty-state">暂无配置信息</div>';
+      }
+      return;
+    }
     
     // 使用 vis-network 渲染
     await renderWithVisNetwork(nodes, edges);
@@ -197,7 +199,25 @@ async function renderDiagram() {
   } catch (error) {
     console.error('Render diagram error:', error);
     if (diagramContainer.value) {
-      diagramContainer.value.innerHTML = `<div class="error-state">加载失败: ${error.message || '未知错误'}</div>`;
+      let errorMessage = '未知错误';
+      if (error.response) {
+        // HTTP 错误响应
+        const status = error.response.status;
+        if (status === 401) {
+          errorMessage = '未授权：请重新登录';
+        } else if (status === 403) {
+          errorMessage = '没有权限访问';
+        } else if (status === 404) {
+          errorMessage = '资源不存在';
+        } else if (status >= 500) {
+          errorMessage = '服务器错误，请稍后重试';
+        } else {
+          errorMessage = error.response.data?.error?.message || `请求失败 (${status})`;
+        }
+      } else if (error.message) {
+        errorMessage = error.message;
+      }
+      diagramContainer.value.innerHTML = `<div class="error-state">加载失败: ${errorMessage}</div>`;
     }
   }
 }
@@ -258,40 +278,45 @@ function buildDiagramData(services, configs) {
     });
   });
   
-  // 第三列：创建所有代理服务节点
-  services.forEach((service) => {
-    const proxyAddress = `${currentProxyHost.value}:${service.proxy_port}`;
-    const jumpServer = `${service.jump_username}@${service.jump_host}:${service.jump_port || 22}`;
-    const serviceNodeId = `local-${service.id}`;
-    
-    nodes.push({
-      id: serviceNodeId,
-      label: `<b>🖥️ 本地代理服务器 ${getStatusBadge(service.status)}</b>\n${service.name}\n${proxyAddress}\n跳板: ${jumpServer}`,
-      group: 'local',
-      shape: 'box',
-      color: unifiedColor,
-      level: 2 // 第三列：所有代理服务都在这一列
-    });
-    
-    // 找到该服务关联的所有配置，创建边：配置 -> 代理服务
-    const serviceConfigs = configs.filter(c => c.proxyServiceId === service.id);
-    console.log(`[ProxyDeploymentDiagram] Service ${service.id} (${service.name}) has ${serviceConfigs.length} config(s)`);
-    
-    serviceConfigs.forEach((config) => {
-      const configNodeId = `target-${config.id}`;
-      const hosts = Array.isArray(config.hosts) ? config.hosts : JSON.parse(config.hosts || '[]');
-      const hostCount = hosts.length;
+  // 第三列：创建所有代理服务节点（如果没有服务，不创建节点，但配置图仍然显示）
+  if (services.length > 0) {
+    services.forEach((service) => {
+      const proxyAddress = `${currentProxyHost.value}:${service.proxy_port}`;
+      const jumpServer = `${service.jump_username}@${service.jump_host}:${service.jump_port || 22}`;
+      const serviceNodeId = `local-${service.id}`;
       
-      // 边：配置 -> 代理服务
-      edges.push({
-        from: configNodeId,
-        to: serviceNodeId,
-        label: `SSH隧道\n(autossh)\nSOCKS5`,
-        arrows: 'to',
-        color: hostCount > 0 ? edgeColor : { color: '#9e9e9e' }
+      nodes.push({
+        id: serviceNodeId,
+        label: `<b>🖥️ 本地代理服务器 ${getStatusBadge(service.status)}</b>\n${service.name}\n${proxyAddress}\n跳板: ${jumpServer}`,
+        group: 'local',
+        shape: 'box',
+        color: unifiedColor,
+        level: 2 // 第三列：所有代理服务都在这一列
+      });
+      
+      // 找到该服务关联的所有配置，创建边：配置 -> 代理服务
+      const serviceConfigs = configs.filter(c => c.proxyServiceId === service.id);
+      console.log(`[ProxyDeploymentDiagram] Service ${service.id} (${service.name}) has ${serviceConfigs.length} config(s)`);
+      
+      serviceConfigs.forEach((config) => {
+        const configNodeId = `target-${config.id}`;
+        const hosts = Array.isArray(config.hosts) ? config.hosts : JSON.parse(config.hosts || '[]');
+        const hostCount = hosts.length;
+        
+        // 边：配置 -> 代理服务
+        edges.push({
+          from: configNodeId,
+          to: serviceNodeId,
+          label: `SSH隧道\n(autossh)\nSOCKS5`,
+          arrows: 'to',
+          color: hostCount > 0 ? edgeColor : { color: '#9e9e9e' }
+        });
       });
     });
-  });
+  } else {
+    // 如果没有代理服务，在配置节点上显示提示信息
+    console.log('[ProxyDeploymentDiagram] No proxy services, showing config nodes only');
+  }
   
   return { nodes, edges };
 }

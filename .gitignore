@@ -90,3 +90,10 @@ server/front-end/dist/assets/SystemConfig-2hm4GeaM.css
 server/front-end/dist/assets/SystemConfig-B_GWgEwM.js
 server/front-end/dist/assets/SystemConfig-B_GWgEwM.js.map
 server/front-end/dist/data/default-hosts.json
+
+data/default-hosts.json
+data/database/database.db-shm
+data/database/database.db-wal
+data/database/test_app_1766392566.txt
+data/database/test_mount.txt
+data/default-hosts.json

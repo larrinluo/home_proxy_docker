@@ -514,9 +514,33 @@ async function handleProxyServiceStart(service) {
     }
   } catch (error) {
     console.error('Start service error:', error);
-    const errorMessage = error.response?.data?.error?.message || error.message || '启动失败';
+    // 提取详细的错误信息
+    let errorMessage = '启动失败';
+    if (error.response) {
+      // 有HTTP响应，尝试从响应中提取错误信息
+      errorMessage = error.response.data?.error?.message || error.response.data?.message || `HTTP ${error.response.status} 错误`;
+    } else if (error.request) {
+      // 请求已发送但没有收到响应（网络错误）
+      errorMessage = '网络错误：无法连接到服务器，请检查网络连接';
+    } else {
+      // 请求配置错误或其他错误
+      errorMessage = error.message || '启动失败';
+    }
+    
+    // 记录详细的错误信息到控制台
+    console.error('Start service error details:', {
+      message: error.message,
+      response: error.response?.data,
+      status: error.response?.status,
+      code: error.code
+    });
+    
     if (tabSystemRef.value && tabSystemRef.value.addLogToServiceDetailTab) {
       tabSystemRef.value.addLogToServiceDetailTab(service.id, 'ERROR', `启动失败: ${errorMessage}`);
+      // 如果有更详细的错误信息，也记录下来
+      if (error.response?.data?.error?.code) {
+        tabSystemRef.value.addLogToServiceDetailTab(service.id, 'ERROR', `错误代码: ${error.response.data.error.code}`);
+      }
       tabSystemRef.value.addLogToServiceDetailTab(service.id, 'INFO', '═══════════════════════════════════════');
     }
     ElMessage.error(errorMessage);

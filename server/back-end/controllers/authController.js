@@ -114,17 +114,34 @@ async function login(req, res) {
     req.session.userId = user.id;
     req.session.username = user.username;
 
-    // 返回用户信息
-    res.json({
-      success: true,
-      data: {
-        user: {
-          id: user.id,
-          username: user.username,
-          email: user.email
+    // 显式保存session，确保cookie正确设置
+    return new Promise((resolve, reject) => {
+      req.session.save((err) => {
+        if (err) {
+          console.error('Session save error:', err);
+          return res.status(500).json({
+            success: false,
+            error: {
+              code: 'INTERNAL_ERROR',
+              message: '登录失败，session保存失败'
+            }
+          });
         }
-      },
-      message: '登录成功'
+
+        // 返回用户信息
+        res.json({
+          success: true,
+          data: {
+            user: {
+              id: user.id,
+              username: user.username,
+              email: user.email
+            }
+          },
+          message: '登录成功'
+        });
+        resolve();
+      });
     });
   } catch (error) {
     console.error('Login error:', error);

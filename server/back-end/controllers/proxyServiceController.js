@@ -485,17 +485,23 @@ async function start(req, res) {
       };
       
       // 调试：打印转换后的对象
-      console.log('Service for process:', JSON.stringify(serviceForProcess, null, 2));
+      console.log('[StartProxyService] Service for process:', JSON.stringify(serviceForProcess, null, 2));
       
       // 验证必要字段
       if (!serviceForProcess.sshKeyPath) {
-        throw new Error(`SSH密钥路径为空。数据库字段 ssh_key_path: ${service.ssh_key_path}`);
+        const errorMsg = `SSH密钥路径为空。数据库字段 ssh_key_path: ${service.ssh_key_path}`;
+        console.error('[StartProxyService]', errorMsg);
+        throw new Error(errorMsg);
       }
       if (!serviceForProcess.proxyPort) {
-        throw new Error(`代理端口为空。数据库字段 proxy_port: ${service.proxy_port}`);
+        const errorMsg = `代理端口为空。数据库字段 proxy_port: ${service.proxy_port}`;
+        console.error('[StartProxyService]', errorMsg);
+        throw new Error(errorMsg);
       }
       
+      console.log('[StartProxyService] Starting process...');
       const { processId, command } = await processManager.startProcess(serviceForProcess);
+      console.log('[StartProxyService] Process started successfully, PID:', processId);
       
       // 确保数据库状态已更新为 running
       await ProxyServiceModel.update(service.id, {
@@ -515,17 +521,24 @@ async function start(req, res) {
       });
     } catch (startError) {
       // 启动失败，更新状态为 error
+      console.error('[StartProxyService] Start failed:', startError);
+      console.error('[StartProxyService] Error stack:', startError.stack);
       await ProxyServiceModel.update(service.id, {
         status: 'error',
         processId: -1  // 启动失败时设置为 -1
       }).catch(err => {
-        console.error('Failed to update service status to error:', err);
+        console.error('[StartProxyService] Failed to update service status to error:', err);
       });
       
       throw startError; // 重新抛出错误，让外层 catch 处理
     }
   } catch (error) {
-    console.error('Start proxy service error:', error);
+    console.error('[StartProxyService] Outer catch - Start proxy service error:', error);
+    console.error('[StartProxyService] Error details:', {
+      message: error.message,
+      stack: error.stack,
+      name: error.name
+    });
     res.status(500).json({
       success: false,
       error: {
@@ -770,7 +783,7 @@ async function connect(req, res) {
       sendLog(res, 'INFO', '');
       sendLog(res, 'INFO', '【步骤 2/6】创建SSH密钥对');
       const keyName = `proxy_${Date.now()}_${proxyPort}`;
-      const privateKeyPath = `./data/ssh-keys/${keyName}`;
+      const privateKeyPath = `/data/ssh-keys/${keyName}`;
       const publicKeyPath = `${privateKeyPath}.pub`;
       
       sendLog(res, 'INFO', `执行命令: ssh-keygen -t rsa -b 2048 -f "${privateKeyPath}" -N "" -C "socks-proxy-${keyName}"`);

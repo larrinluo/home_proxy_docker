@@ -23,16 +23,72 @@ class ProxyProcessManager {
     } = service;
 
     // 将相对路径转换为绝对路径
+    // 在Docker容器中，SSH密钥应该在 /data/ssh-keys/ 目录下
+    // 如果路径是绝对路径，直接使用；否则尝试多个可能的路径
     const path = require('path');
-    const absoluteSshKeyPath = path.isAbsolute(sshKeyPath) 
-      ? sshKeyPath 
-      : path.resolve(__dirname, '..', sshKeyPath);
+    let absoluteSshKeyPath = null;
+    
+    if (path.isAbsolute(sshKeyPath)) {
+      absoluteSshKeyPath = sshKeyPath;
+    } else {
+      // 尝试多个可能的路径
+      const possiblePaths = [
+        // Docker容器中的标准路径
+        path.join('/data/ssh-keys', sshKeyPath),
+        // 相对于项目根目录的路径
+        path.resolve(__dirname, '..', '..', sshKeyPath),
+        // 相对于当前文件的路径
+        path.resolve(__dirname, '..', sshKeyPath),
+        // 如果sshKeyPath已经包含data/ssh-keys，直接解析
+        path.resolve(__dirname, '..', '..', 'data', 'ssh-keys', path.basename(sshKeyPath))
+      ];
+      
+      // 检查哪个路径存在
+      for (const possiblePath of possiblePaths) {
+        try {
+          await fs.access(possiblePath);
+          absoluteSshKeyPath = possiblePath;
+          break;
+        } catch (e) {
+          // 继续尝试下一个路径
+        }
+      }
+      
+      // 如果所有路径都不存在，使用第一个可能的路径（用于错误提示）
+      if (!absoluteSshKeyPath) {
+        absoluteSshKeyPath = possiblePaths[0];
+      }
+    }
 
     // 验证SSH密钥文件是否存在
     try {
       await fs.access(absoluteSshKeyPath);
     } catch (error) {
-      throw new Error(`SSH密钥文件不存在或不可访问: ${absoluteSshKeyPath}`);
+      // 提供更详细的错误信息，包括尝试过的路径
+      const errorMsg = `SSH密钥文件不存在或不可访问: ${absoluteSshKeyPath}`;
+      console.error(`[ProxyProcessManager] SSH key path resolution failed:`);
+      console.error(`  Original path: ${sshKeyPath}`);
+      console.error(`  Resolved path: ${absoluteSshKeyPath}`);
+      console.error(`  Error: ${error.message}`);
+      throw new Error(errorMsg);
+    }
+    
+    // 验证文件权限（SSH要求私钥权限为600）
+    try {
+      const stats = await fs.stat(absoluteSshKeyPath);
+      const mode = stats.mode & parseInt('777', 8);
+      if (mode !== parseInt('600', 8) && mode !== parseInt('400', 8)) {
+        console.warn(`[ProxyProcessManager] SSH key file permissions are ${mode.toString(8)}, should be 600 or 400`);
+        // 尝试修复权限
+        try {
+          await fs.chmod(absoluteSshKeyPath, 0o600);
+          console.log(`[ProxyProcessManager] Fixed SSH key file permissions to 600`);
+        } catch (chmodError) {
+          console.warn(`[ProxyProcessManager] Failed to fix SSH key file permissions: ${chmodError.message}`);
+        }
+      }
+    } catch (statError) {
+      console.warn(`[ProxyProcessManager] Failed to check SSH key file permissions: ${statError.message}`);
     }
 
     // 构建autossh命令
@@ -80,7 +136,10 @@ class ProxyProcessManager {
       });
 
       process.stderr.on('data', (data) => {
-        stderr += data.toString();
+        const dataStr = data.toString();
+        stderr += dataStr;
+        // 实时记录stderr，便于调试
+        console.error(`[ProxyProcessManager] autossh stderr (real-time):`, dataStr.trim());
       });
 
       let processExited = false;
@@ -89,9 +148,9 @@ class ProxyProcessManager {
       process.on('error', (error) => {
         // 如果进程启动失败（如命令不存在）
         if (error.code === 'ENOENT') {
-          reject(new Error('autossh 命令未找到，请确保已安装 autossh'));
+          reject(new Error('autossh 命令未找到，请确保已安装 autossh。在Docker容器中，autossh应该已经安装。'));
         } else {
-          reject(new Error(`启动进程失败: ${error.message}`));
+          reject(new Error(`启动autossh进程失败: ${error.message}`));
         }
       });
 
@@ -114,8 +173,28 @@ class ProxyProcessManager {
             console.error('Failed to update process status:', err);
           });
           
-          // 如果进程在启动检查之前就退出了，拒绝 Promise
-          const errorMsg = stderr || `autossh 进程异常退出，退出码: ${code}`;
+          // 分析错误原因，提供更详细的错误信息
+          let errorMsg = '';
+          if (stderr) {
+            // 尝试从stderr中提取有用的错误信息
+            const stderrLower = stderr.toLowerCase();
+            if (stderrLower.includes('permission denied') || stderrLower.includes('permissions')) {
+              errorMsg = `SSH密钥权限错误: ${stderr.trim()}`;
+            } else if (stderrLower.includes('no such file') || stderrLower.includes('cannot find')) {
+              errorMsg = `SSH密钥文件不存在: ${stderr.trim()}`;
+            } else if (stderrLower.includes('connection refused') || stderrLower.includes('could not resolve')) {
+              errorMsg = `无法连接到跳板服务器 ${jumpHost}:${jumpPort}: ${stderr.trim()}`;
+            } else if (stderrLower.includes('authentication failed') || stderrLower.includes('publickey')) {
+              errorMsg = `SSH认证失败，请检查SSH密钥是否正确: ${stderr.trim()}`;
+            } else {
+              errorMsg = stderr.trim();
+            }
+          }
+          
+          if (!errorMsg) {
+            errorMsg = `autossh 进程异常退出，退出码: ${code}`;
+          }
+          
           reject(new Error(errorMsg));
         }
       });

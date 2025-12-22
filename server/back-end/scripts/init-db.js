@@ -3,7 +3,7 @@ const fs = require('fs');
 const path = require('path');
 require('dotenv').config();
 
-const DB_PATH = process.env.DB_PATH || './data/database.db';
+const DB_PATH = process.env.DB_PATH || '/data/database/database.db';
 const SCHEMA_PATH = path.join(__dirname, '../db/schema.sql');
 
 /**
@@ -69,6 +69,7 @@ if (require.main === module) {
 }
 
 module.exports = { initDatabase };
+
 
 
 

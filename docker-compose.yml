@@ -1,0 +1,37 @@
+version: '3.8'
+
+services:
+  socks-proxy:
+    image: socks-proxy:latest
+    container_name: socks-proxy
+    restart: unless-stopped
+    ports:
+      - "8090:8090"
+      - "11081:11081"
+      - "11082:11082"
+      - "11083:11083"
+    volumes:
+      - ./data/database:/data/database
+      - ./data/ssh-keys:/data/ssh-keys
+      - ./data/logs:/data/logs
+      - ./data/pac:/data/pac
+    environment:
+      - PROXY_HOST=${PROXY_HOST:-192.168.2.4}
+      - PROXY_PORT=${PROXY_PORT:-8090}
+      - NODE_ENV=production
+      - SESSION_SECRET=${SESSION_SECRET:-your-secret-key-here}
+      - DB_PATH=/data/database/database.db
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8090/ready"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+      start_period: 30s
+    networks:
+      - proxy-network
+
+networks:
+  proxy-network:
+    driver: bridge
+
+
