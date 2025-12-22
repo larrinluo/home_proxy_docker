@@ -2,8 +2,44 @@ const net = require('net');
 const ProxyServiceModel = require('../db/models/proxy-services');
 require('dotenv').config();
 
-const PROXY_PORT_START = parseInt(process.env.PROXY_PORT_START) || 11081;
-const PROXY_PORT_END = parseInt(process.env.PROXY_PORT_END) || 11083;
+// 本地开发环境使用 21081-21083，生产环境使用 11081-11083
+const getDefaultPortStart = () => {
+  if (process.env.NODE_ENV === 'development') {
+    return 21081;
+  }
+  return 11081;
+};
+
+const getDefaultPortEnd = () => {
+  if (process.env.NODE_ENV === 'development') {
+    return 21083;
+  }
+  return 11083;
+};
+
+// 如果环境变量中明确设置了端口范围，使用环境变量的值
+// 否则根据 NODE_ENV 自动选择默认值
+let PROXY_PORT_START = process.env.PROXY_PORT_START ? parseInt(process.env.PROXY_PORT_START) : null;
+let PROXY_PORT_END = process.env.PROXY_PORT_END ? parseInt(process.env.PROXY_PORT_END) : null;
+
+// 如果未设置，根据 NODE_ENV 使用默认值
+if (PROXY_PORT_START === null) {
+  PROXY_PORT_START = getDefaultPortStart();
+}
+if (PROXY_PORT_END === null) {
+  PROXY_PORT_END = getDefaultPortEnd();
+}
+
+// 如果明确设置了端口范围，但设置的是开发环境的端口且当前是生产环境，则使用生产环境的默认值
+// 这样可以避免开发环境的 .env 文件影响生产环境
+if (process.env.NODE_ENV === 'production') {
+  if (PROXY_PORT_START === 21081 || PROXY_PORT_START === 21082 || PROXY_PORT_START === 21083) {
+    PROXY_PORT_START = 11081;
+  }
+  if (PROXY_PORT_END === 21081 || PROXY_PORT_END === 21082 || PROXY_PORT_END === 21083) {
+    PROXY_PORT_END = 11083;
+  }
+}
 
 /**
  * 端口管理器
@@ -77,6 +113,17 @@ class PortManager {
     // 端口释放实际上是通过删除代理服务记录完成的
     // 这里可以添加额外的清理逻辑（如果需要）
     return true;
+  }
+
+  /**
+   * 获取端口范围（用于日志显示）
+   * @returns {{start: number, end: number}}
+   */
+  getPortRange() {
+    return {
+      start: PROXY_PORT_START,
+      end: PROXY_PORT_END
+    };
   }
 }
 

@@ -377,13 +377,14 @@ async function renderWithVisNetwork(nodes, edges) {
           align: 'center',
           face: 'Arial, sans-serif'
         },
-        margin: 6, // 减少节点边距，使节点更紧凑
+        margin: 10, // 增加节点边距，避免节点内容重叠
         widthConstraint: { 
           minimum: 200,
           maximum: 300 
         },
         heightConstraint: {
-          minimum: 60 // 减少最小高度，使节点更紧凑
+          minimum: 80, // 增加最小高度，确保节点有足够空间显示内容
+          maximum: 150 // 设置最大高度，避免节点过大
         },
         shapeProperties: {
           borderRadius: 8
@@ -428,11 +429,12 @@ async function renderWithVisNetwork(nodes, edges) {
           direction: 'LR', // 从左到右
           sortMethod: 'directed',
           levelSeparation: levelSeparation, // 根据容器宽度动态计算，使每列约占1/3宽度
-          nodeSpacing: 90, // 垂直间距，使布局紧凑但仍避免重叠
-          treeSpacing: 60, // 树间距，使布局紧凑
+          nodeSpacing: 120, // 垂直间距，适中的间距使节点清晰但不拥挤
+          treeSpacing: 80, // 树间距，适中的间距避免节点重叠
           blockShifting: true, // 启用块移动，优化布局
           edgeMinimization: true, // 最小化边长度
-          parentCentralization: true // 启用父节点居中，使每列内容居中
+          parentCentralization: true, // 启用父节点居中，使每列内容居中
+          shakeTowards: 'leaves' // 将节点向叶子节点方向移动，避免重叠
         }
       },
       physics: {

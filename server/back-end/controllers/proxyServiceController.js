@@ -767,7 +767,8 @@ async function connect(req, res) {
       // 1. 选择可用代理端口
       sendLog(res, 'INFO', '');
       sendLog(res, 'INFO', '【步骤 1/6】选择可用代理端口');
-      sendLog(res, 'INFO', '执行命令: 检查端口范围 11081-11082 的可用性');
+      const portRange = portManager.getPortRange();
+      sendLog(res, 'INFO', `执行命令: 检查端口范围 ${portRange.start}-${portRange.end} 的可用性`);
       
       const proxyPort = await withTimeout(
         portManager.allocatePort(),

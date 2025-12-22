@@ -106,7 +106,10 @@ const isSecure = process.env.SESSION_SECURE !== undefined
 // connect-sqlite3支持两种方式：
 // 1. db: 完整路径（立即打开）
 // 2. dir + db: 目录和文件名（延迟打开）
-const dbPath = process.env.DB_PATH || '/data/database/database.db';
+// 本地开发环境使用相对路径，生产环境使用绝对路径
+const dbPath = process.env.DB_PATH || (process.env.NODE_ENV === 'development' 
+  ? './data/database/database.db' 
+  : '/data/database/database.db');
 const resolvedDbPath = path.isAbsolute(dbPath) ? dbPath : path.resolve(process.cwd(), dbPath);
 const sessionStoreOptions = {
   dir: path.dirname(resolvedDbPath),

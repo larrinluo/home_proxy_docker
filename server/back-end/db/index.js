@@ -3,7 +3,10 @@ const path = require('path');
 const fs = require('fs');
 require('dotenv').config();
 
-const DB_PATH = process.env.DB_PATH || '/data/database/database.db';
+// 本地开发环境使用相对路径，生产环境使用绝对路径
+const DB_PATH = process.env.DB_PATH || (process.env.NODE_ENV === 'development' 
+  ? './data/database/database.db' 
+  : '/data/database/database.db');
 
 /**
  * 数据库连接类
