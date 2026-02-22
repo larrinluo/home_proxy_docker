@@ -33,39 +33,30 @@ function getVersionInfo() {
 }
 
 /**
- * 获取数据库版本
+ * 获取数据库版本（JSON 存储版本）
  */
-async function getDatabaseVersion(dbInstance) {
-  try {
-    const row = await dbInstance.get(
-      'SELECT MAX(version) as version FROM schema_migrations'
-    );
-    return row?.version || null;
-  } catch (error) {
-    // 如果表不存在，返回null
-    if (error.message && error.message.includes('no such table')) {
-      return null;
-    }
-    throw error;
-  }
+async function getDatabaseVersion(jsonStoreInstance) {
+  // JSON 存储版本固定为 2.0
+  return '2.0';
 }
 
 /**
  * 获取完整版本信息（包括数据库版本）
  */
-async function getFullVersionInfo(db) {
+async function getFullVersionInfo(jsonStoreInstance) {
   const versionInfo = getVersionInfo();
   let databaseVersion = null;
 
   try {
-    databaseVersion = await getDatabaseVersion(db);
+    databaseVersion = await getDatabaseVersion(jsonStoreInstance);
   } catch (error) {
     console.warn('Failed to get database version:', error.message);
   }
 
   return {
     ...versionInfo,
-    databaseVersion
+    databaseVersion,
+    storageType: 'JSON'
   };
 }
 

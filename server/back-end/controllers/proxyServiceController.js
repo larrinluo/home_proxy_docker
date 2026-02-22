@@ -434,11 +434,20 @@ async function deleteService(req, res) {
  * 启动代理服务
  */
 async function start(req, res) {
-  try {
-    const { id } = req.params;
+  const startTime = Date.now();
+  const serviceId = req.params.id;
 
-    const service = await ProxyServiceModel.findById(id);
+  console.log('\n' + '='.repeat(60));
+  console.log(`[StartProxyService] 开始启动代理服务 (ID: ${serviceId})`);
+  console.log('='.repeat(60));
+
+  try {
+    // 步骤1: 查询服务配置
+    console.log(`\n[步骤 1/6] 查询服务配置...`);
+    const service = await ProxyServiceModel.findById(serviceId);
+
     if (!service) {
+      console.error(`[步骤 1/6] ❌ 服务不存在 (ID: ${serviceId})`);
       return res.status(404).json({
         success: false,
         error: {
@@ -448,11 +457,18 @@ async function start(req, res) {
       });
     }
 
-    // 调试：打印服务对象
-    console.log('Service from database:', JSON.stringify(service, null, 2));
+    console.log(`[步骤 1/6] ✅ 服务配置查询成功`);
+    console.log(`  - 服务名称: ${service.name}`);
+    console.log(`  - 跳板服务器: ${service.jump_host}:${service.jump_port}`);
+    console.log(`  - 用户名: ${service.jump_username}`);
+    console.log(`  - 代理端口: ${service.proxy_port}`);
+    console.log(`  - 当前状态: ${service.status}`);
+    console.log(`  - SSH密钥: ${service.ssh_key_path}`);
 
-    // 如果已经在运行，直接返回
+    // 步骤2: 检查服务状态
+    console.log(`\n[步骤 2/6] 检查服务状态...`);
     if (service.status === 'running') {
+      console.log(`[步骤 2/6] ℹ️  服务已在运行中`);
       return res.json({
         success: true,
         data: {
@@ -462,88 +478,245 @@ async function start(req, res) {
         message: '服务已在运行'
       });
     }
+    console.log(`[步骤 2/6] ✅ 服务未运行，可以启动`);
 
-    // 停止旧进程（如果存在）
-    if (service.process_id) {
+    // 步骤3: 停止旧进程（如果存在）
+    console.log(`\n[步骤 3/6] 检查并停止旧进程...`);
+    if (service.process_id && service.process_id > 0) {
+      console.log(`  - 发现旧进程 PID: ${service.process_id}`);
       try {
-        await processManager.stopProcess(service.process_id);
+        const isRunning = await processManager.isProcessRunning(service.process_id);
+        if (isRunning) {
+          console.log(`  - 正在停止旧进程...`);
+          await processManager.stopProcess(service.process_id);
+          console.log(`[步骤 3/6] ✅ 旧进程已停止 (PID: ${service.process_id})`);
+        } else {
+          console.log(`[步骤 3/6] ℹ️  旧进程已不存在 (PID: ${service.process_id})`);
+        }
       } catch (error) {
-        console.error('Failed to stop old process:', error);
+        console.warn(`[步骤 3/6] ⚠️  停止旧进程失败，继续: ${error.message}`);
       }
+    } else {
+      console.log(`[步骤 3/6] ✅ 无旧进程需要停止`);
     }
 
-    // 启动新进程
-    try {
-      // 将数据库字段名（下划线）转换为函数期望的字段名（驼峰）
-      const serviceForProcess = {
-        id: service.id,
-        jumpHost: service.jump_host,
-        jumpPort: service.jump_port,
-        jumpUsername: service.jump_username,
-        proxyPort: service.proxy_port,
-        sshKeyPath: service.ssh_key_path
-      };
-      
-      // 调试：打印转换后的对象
-      console.log('[StartProxyService] Service for process:', JSON.stringify(serviceForProcess, null, 2));
-      
-      // 验证必要字段
-      if (!serviceForProcess.sshKeyPath) {
-        const errorMsg = `SSH密钥路径为空。数据库字段 ssh_key_path: ${service.ssh_key_path}`;
-        console.error('[StartProxyService]', errorMsg);
-        throw new Error(errorMsg);
-      }
-      if (!serviceForProcess.proxyPort) {
-        const errorMsg = `代理端口为空。数据库字段 proxy_port: ${service.proxy_port}`;
-        console.error('[StartProxyService]', errorMsg);
-        throw new Error(errorMsg);
-      }
-      
-      console.log('[StartProxyService] Starting process...');
-      const { processId, command } = await processManager.startProcess(serviceForProcess);
-      console.log('[StartProxyService] Process started successfully, PID:', processId);
-      
-      // 确保数据库状态已更新为 running
-      await ProxyServiceModel.update(service.id, {
-        status: 'running',
-        processId
-      });
+    // 步骤4: 准备启动参数
+    console.log(`\n[步骤 4/6] 准备启动参数...`);
+    const serviceForProcess = {
+      id: service.id,
+      jumpHost: service.jump_host,
+      jumpPort: service.jump_port,
+      jumpUsername: service.jump_username,
+      proxyPort: service.proxy_port,
+      sshKeyPath: service.ssh_key_path
+    };
 
-      res.json({
-        success: true,
-        data: {
-          id: service.id,
-          status: 'running',
-          processId,
-          command // 返回执行的autossh命令
-        },
-        message: '启动成功'
-      });
-    } catch (startError) {
-      // 启动失败，更新状态为 error
-      console.error('[StartProxyService] Start failed:', startError);
-      console.error('[StartProxyService] Error stack:', startError.stack);
-      await ProxyServiceModel.update(service.id, {
-        status: 'error',
-        processId: -1  // 启动失败时设置为 -1
-      }).catch(err => {
-        console.error('[StartProxyService] Failed to update service status to error:', err);
-      });
-      
-      throw startError; // 重新抛出错误，让外层 catch 处理
+    // 验证必要字段
+    const validationErrors = [];
+    if (!serviceForProcess.sshKeyPath) {
+      validationErrors.push(`SSH密钥路径为空 (ssh_key_path: ${service.ssh_key_path})`);
     }
-  } catch (error) {
-    console.error('[StartProxyService] Outer catch - Start proxy service error:', error);
-    console.error('[StartProxyService] Error details:', {
-      message: error.message,
-      stack: error.stack,
-      name: error.name
+    if (!serviceForProcess.proxyPort) {
+      validationErrors.push(`代理端口为空 (proxy_port: ${service.proxy_port})`);
+    }
+    if (!serviceForProcess.jumpHost) {
+      validationErrors.push(`跳板主机为空 (jump_host: ${service.jump_host})`);
+    }
+    if (!serviceForProcess.jumpUsername) {
+      validationErrors.push(`跳板用户名为空 (jump_username: ${service.jump_username})`);
+    }
+
+    if (validationErrors.length > 0) {
+      console.error(`[步骤 4/6] ❌ 参数验证失败:`);
+      validationErrors.forEach(err => console.error(`  - ${err}`));
+      throw new Error(`参数验证失败: ${validationErrors.join('; ')}`);
+    }
+
+    console.log(`[步骤 4/6] ✅ 启动参数准备完成`);
+    console.log(`  - 命令格式: autossh -M 0 -N -o "ServerAliveInterval=60" -o "ServerAliveCountMax=3" -o "StrictHostKeyChecking=no" -i <密钥> -D 0.0.0.0:${serviceForProcess.proxyPort} ${serviceForProcess.jumpUsername}@${serviceForProcess.jumpHost} -p ${serviceForProcess.jumpPort}`);
+
+    // 步骤5: 启动autossh进程
+    console.log(`\n[步骤 5/6] 启动autossh进程...`);
+    console.log(`  - 正在执行进程启动...`);
+    const { processId, command } = await processManager.startProcess(serviceForProcess);
+
+    console.log(`[步骤 5/6] ✅ autossh进程启动成功`);
+    console.log(`  - 进程PID: ${processId}`);
+    console.log(`  - 完整命令: ${command}`);
+
+    // 步骤6: 更新数据库状态
+    console.log(`\n[步骤 6/6] 更新数据库状态...`);
+    await ProxyServiceModel.update(service.id, {
+      status: 'running',
+      processId
     });
+    console.log(`[步骤 6/6] ✅ 数据库状态已更新`);
+
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+    console.log(`\n${'='.repeat(60)}`);
+    console.log(`[StartProxyService] ✅ 代理服务启动成功!`);
+    console.log(`  - 服务ID: ${service.id}`);
+    console.log(`  - 进程PID: ${processId}`);
+    console.log(`  - 代理端口: ${service.proxy_port}`);
+    console.log(`  - 耗时: ${duration}秒`);
+    console.log(`${'='.repeat(60)}\n`);
+
+    res.json({
+      success: true,
+      data: {
+        id: service.id,
+        name: service.name,
+        status: 'running',
+        processId,
+        proxyPort: service.proxy_port,
+        command
+      },
+      message: '启动成功'
+    });
+  } catch (startError) {
+    const duration = ((Date.now() - startTime) / 1000).toFixed(2);
+
+    // 尝试获取服务信息（用于错误提示）
+    let service = null;
+    try {
+      service = await ProxyServiceModel.findById(serviceId);
+    } catch (e) {
+      console.error('[StartProxyService] Failed to fetch service details for error reporting:', e.message);
+    }
+
+    // 启动失败，更新状态为 error
+    console.error(`\n${'='.repeat(60)}`);
+    console.error(`[StartProxyService] ❌ 代理服务启动失败!`);
+    console.error(`  - 服务ID: ${serviceId}`);
+    console.error(`  - 耗时: ${duration}秒`);
+    console.error(`  - 错误类型: ${startError.name}`);
+    console.error(`  - 错误消息: ${startError.message}`);
+    console.error(`\n失败原因分析:`);
+
+    // 构建详细的错误信息对象（返回给用户）
+    let errorDetails = {
+      serviceId,
+      duration: `${duration}s`,
+      errorType: startError.name,
+      reason: '',
+      solution: [],
+      troubleshooting: []
+    };
+
+    // 详细分析错误原因
+    if (startError.message.includes('SSH密钥文件不存在')) {
+      errorDetails.reason = 'SSH密钥文件不存在或路径错误';
+      errorDetails.solution = [
+        `请检查密钥文件路径: ${service ? service.ssh_key_path : 'N/A'}`,
+        `运行命令查看目录: ls -la /data/ssh-keys/`,
+        `确认密钥文件名正确`
+      ];
+      errorDetails.troubleshooting = [
+        `可能原因:`,
+        `  1. 密钥文件从未生成`,
+        `  2. 密钥文件路径配置错误`,
+        `  3. 密钥文件被误删除`,
+        ``,
+        `解决方案:`,
+        `  1. 重新创建该跳板服务（会自动生成新密钥）`,
+        `  2. 或手动上传密钥文件到 /data/ssh-keys/ 目录`
+      ];
+
+      console.error(`  【原因】SSH密钥文件不存在或路径错误`);
+      console.error(`  【解决】请检查密钥文件路径: ${service ? service.ssh_key_path : 'N/A'}`);
+      console.error(`  【命令】ls -la /data/ssh-keys/`);
+    } else if (startError.message.includes('Permission denied') || startError.message.includes('permissions')) {
+      errorDetails.reason = 'SSH密钥文件权限错误';
+      errorDetails.solution = [
+        `请设置正确的文件权限: chmod 600 <密钥文件>`,
+        `或重新创建服务（系统会自动设置权限）`
+      ];
+      errorDetails.troubleshooting = [
+        `SSH 要求私钥文件权限必须为 600 或 400`,
+        `当前权限过于开放，SSH 拒绝使用该密钥`
+      ];
+
+      console.error(`  【原因】SSH密钥文件权限错误`);
+      console.error(`  【解决】请设置正确的文件权限: chmod 600 <密钥文件>`);
+    } else if (startError.message.includes('Connection refused') || startError.message.includes('ETIMEDOUT')) {
+      errorDetails.reason = '无法连接到跳板服务器';
+      errorDetails.solution = [
+        `检查服务器地址是否正确: ${service ? service.jump_host : 'N/A'}`,
+        `检查端口是否正确: ${service ? service.jump_port : 'N/A'}`,
+        `确认服务器是否在线`,
+        `检查防火墙是否允许SSH连接`
+      ];
+      errorDetails.troubleshooting = [
+        `手动测试连接:`,
+        `  ssh ${service ? service.jump_username : 'user'}@${service ? service.jump_host : 'host'} -p ${service ? service.jump_port : '22'}`,
+        ``,
+        `可能原因:`,
+        `  1. 服务器未启动或网络不可达`,
+        `  2. 防火墙阻止连接`,
+        `  3. SSH服务未运行`,
+        `  4. 端口号配置错误`
+      ];
+
+      console.error(`  【原因】无法连接到跳板服务器`);
+      console.error(`  【检查】`);
+      console.error(`    1. 服务器地址是否正确: ${service ? service.jump_host : 'N/A'}`);
+      console.error(`    2. 端口是否正确: ${service ? service.jump_port : 'N/A'}`);
+      console.error(`    3. 服务器是否在线`);
+      console.error(`    4. 防火墙是否允许SSH连接`);
+    } else if (startError.message.includes('Authentication failed') || startError.message.includes('publickey')) {
+      errorDetails.reason = 'SSH认证失败';
+      errorDetails.solution = [
+        `检查公钥是否正确添加到跳板服务器`,
+        `验证 authorized_keys 文件权限为 600`,
+        `确认SSH密钥匹配`
+      ];
+      errorDetails.troubleshooting = [
+        `验证命令:`,
+        `  ssh -i <密钥文件> ${service ? service.jump_username : 'user'}@${service ? service.jump_host : 'host'} -p ${service ? service.jump_port : '22'}`,
+        ``,
+        `可能原因:`,
+        `  1. 公钥未正确添加到服务器`,
+        `  2. authorized_keys 文件权限不正确`,
+        `  3. SSH密钥不匹配`,
+        `  4. .ssh 目录权限不正确（应为 700）`
+      ];
+
+      console.error(`  【原因】SSH认证失败`);
+      console.error(`  【可能】`);
+      console.error(`    1. 公钥未正确添加到服务器`);
+      console.error(`    2. authorized_keys文件权限不正确`);
+      console.error(`    3. SSH密钥不匹配`);
+      console.error(`  【验证】ssh -i <密钥文件> ${service ? service.jump_username : 'user'}@${service ? service.jump_host : 'host'} -p ${service ? service.jump_port : '22'}`);
+    } else if (startError.message.includes('端口') && startError.message.includes('已被占用')) {
+      errorDetails.reason = '代理端口已被占用';
+      errorDetails.solution = [
+        `检查端口占用: lsof -i :${service ? service.proxy_port : 'port'}`,
+        `停止占用该端口的进程`,
+        `或更新服务配置使用其他端口`
+      ];
+
+      console.error(`  【原因】代理端口已被占用`);
+      console.error(`  【检查】lsof -i :${service ? service.proxy_port : 'port'}`);
+    } else {
+      errorDetails.reason = '未知错误';
+      errorDetails.troubleshooting = [startError.stack || startError.message];
+      console.error(`  【其他】${startError.stack}`);
+    }
+    console.error(`${'='.repeat(60)}\n`);
+
+    await ProxyServiceModel.update(serviceId, {
+      status: 'error',
+      processId: -1
+    }).catch(err => {
+      console.error('[StartProxyService] 更新数据库状态失败:', err);
+    });
+
     res.status(500).json({
       success: false,
       error: {
-        code: 'INTERNAL_ERROR',
-        message: error.message || '启动代理服务失败'
+        code: 'START_FAILED',
+        message: startError.message,
+        details: errorDetails
       }
     });
   }

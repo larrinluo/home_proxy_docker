@@ -1,4 +1,4 @@
-const db = require('../index');
+const jsonStore = require('../json-store');
 
 /**
  * Host配置模型
@@ -9,27 +9,36 @@ class HostConfigModel {
    */
   static async create(configData) {
     const { name, proxyServiceId, hosts, enabled = 1 } = configData;
-    const hostsJson = JSON.stringify(hosts);
 
-    const sql = `
-      INSERT INTO host_configs (name, proxy_service_id, hosts, enabled)
-      VALUES (?, ?, ?, ?)
-    `;
-    const result = await db.run(sql, [name, proxyServiceId, hostsJson, enabled ? 1 : 0]);
-    return this.findById(result.lastID);
+    const result = await jsonStore.insert('host_configs', {
+      name,
+      proxy_service_id: proxyServiceId,
+      hosts: JSON.stringify(hosts),
+      enabled: enabled ? 1 : 0
+    });
+
+    // 解析 hosts 字段
+    result.hosts = JSON.parse(result.hosts);
+    result.enabled = result.enabled === 1;
+
+    return result;
   }
 
   /**
    * 根据ID查找Host配置
    */
   static async findById(id) {
-    const sql = 'SELECT * FROM host_configs WHERE id = ?';
-    const row = await db.get(sql, [id]);
-    if (row) {
-      row.hosts = JSON.parse(row.hosts);
-      row.enabled = row.enabled === 1;
+    const result = await jsonStore.findById('host_configs', id);
+
+    if (result) {
+      // 解析 JSON 字段
+      if (typeof result.hosts === 'string') {
+        result.hosts = JSON.parse(result.hosts);
+      }
+      result.enabled = result.enabled === 1;
     }
-    return row;
+
+    return result;
   }
 
   /**
@@ -37,75 +46,77 @@ class HostConfigModel {
    */
   static async findAll(options = {}) {
     const { proxyServiceId, page, pageSize } = options;
-    let sql = 'SELECT * FROM host_configs';
-    const params = [];
 
-    if (proxyServiceId) {
-      sql += ' WHERE proxy_service_id = ?';
-      params.push(proxyServiceId);
-    }
+    const where = proxyServiceId !== undefined ? { proxy_service_id: proxyServiceId } : undefined;
 
-    sql += ' ORDER BY created_at DESC';
+    const limit = pageSize;
+    const offset = page && pageSize ? (page - 1) * pageSize : undefined;
 
-    if (page && pageSize) {
-      const offset = (page - 1) * pageSize;
-      sql += ' LIMIT ? OFFSET ?';
-      params.push(pageSize, offset);
-    }
+    const result = await jsonStore.findAll('host_configs', {
+      where,
+      orderBy: 'created_at',
+      order: 'DESC',
+      limit,
+      offset
+    });
 
-    const rows = await db.all(sql, params);
-    return rows.map(row => ({
+    // 解析 hosts 字段
+    return result.map(row => ({
       ...row,
-      hosts: JSON.parse(row.hosts)
+      hosts: typeof row.hosts === 'string' ? JSON.parse(row.hosts) : row.hosts,
+      enabled: row.enabled === 1
     }));
   }
 
   /**
-   * 获取所有Host配置（包含代理服务信息）
+   * 获取所有Host配置（包含代理服务信息）- 手动实现 JOIN
    */
   static async findAllWithProxyService(options = {}) {
     const { proxyServiceId, enabled } = options;
-    let sql = `
-      SELECT 
-        hc.*,
-        ps.name as proxy_service_name,
-        ps.status as proxy_service_status,
-        ps.proxy_port as proxy_service_port
-      FROM host_configs hc
-      LEFT JOIN proxy_services ps ON hc.proxy_service_id = ps.id
-    `;
-    const params = [];
-    const conditions = [];
 
-    if (proxyServiceId) {
-      conditions.push('hc.proxy_service_id = ?');
-      params.push(proxyServiceId);
+    // 构建查询条件
+    const where = {};
+    if (proxyServiceId !== undefined) {
+      where.proxy_service_id = proxyServiceId;
     }
-    
     if (enabled !== undefined) {
-      conditions.push('hc.enabled = ?');
-      params.push(enabled ? 1 : 0);
+      where.enabled = enabled ? 1 : 0;
     }
 
-    if (conditions.length > 0) {
-      sql += ' WHERE ' + conditions.join(' AND ');
-    }
+    // 查询所有 host_configs
+    const hostConfigs = await jsonStore.findAll('host_configs', {
+      where,
+      orderBy: 'created_at',
+      order: 'DESC'
+    });
 
-    sql += ' ORDER BY hc.created_at DESC';
+    // 查询所有 proxy_services（用于 JOIN）
+    const proxyServices = await jsonStore.findAll('proxy_services', {});
 
-    const rows = await db.all(sql, params);
-    return rows.map(row => ({
-      id: row.id,
-      name: row.name,
-      proxyServiceId: row.proxy_service_id,
-      hosts: JSON.parse(row.hosts),
-      enabled: row.enabled === 1,
-      proxyServiceName: row.proxy_service_name,
-      proxyServiceStatus: row.proxy_service_status,
-      proxyServicePort: row.proxy_service_port,
-      createdAt: row.created_at,
-      updatedAt: row.updated_at
-    }));
+    // 创建 proxy_service 映射
+    const serviceMap = new Map();
+    proxyServices.forEach(ps => {
+      serviceMap.set(ps.id, ps);
+    });
+
+    // 手动 JOIN
+    const result = hostConfigs.map(hc => {
+      const proxyService = serviceMap.get(hc.proxy_service_id);
+      return {
+        id: hc.id,
+        name: hc.name,
+        proxyServiceId: hc.proxy_service_id,
+        hosts: typeof hc.hosts === 'string' ? JSON.parse(hc.hosts) : hc.hosts,
+        enabled: hc.enabled === 1,
+        proxyServiceName: proxyService?.name || null,
+        proxyServiceStatus: proxyService?.status || null,
+        proxyServicePort: proxyService?.proxy_port || null,
+        createdAt: hc.created_at,
+        updatedAt: hc.updated_at
+      };
+    });
+
+    return result;
   }
 
   /**
@@ -113,70 +124,65 @@ class HostConfigModel {
    */
   static async update(id, configData) {
     const { name, proxyServiceId, hosts, enabled } = configData;
-    const updates = [];
-    const params = [];
+    const updateData = {};
 
     if (name !== undefined) {
-      updates.push('name = ?');
-      params.push(name);
+      updateData.name = name;
     }
     if (proxyServiceId !== undefined) {
-      updates.push('proxy_service_id = ?');
-      params.push(proxyServiceId);
+      updateData.proxy_service_id = proxyServiceId;
     }
     if (hosts !== undefined) {
-      updates.push('hosts = ?');
-      params.push(JSON.stringify(hosts));
+      updateData.hosts = JSON.stringify(hosts);
     }
     if (enabled !== undefined) {
-      updates.push('enabled = ?');
-      params.push(enabled ? 1 : 0);
+      updateData.enabled = enabled ? 1 : 0;
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(updateData).length === 0) {
       return this.findById(id);
     }
 
-    updates.push('updated_at = CURRENT_TIMESTAMP');
-    params.push(id);
+    const result = await jsonStore.update('host_configs', id, updateData);
 
-    const sql = `UPDATE host_configs SET ${updates.join(', ')} WHERE id = ?`;
-    await db.run(sql, params);
-    return this.findById(id);
+    // 解析 hosts 字段
+    if (typeof result.hosts === 'string') {
+      result.hosts = JSON.parse(result.hosts);
+    }
+    result.enabled = result.enabled === 1;
+
+    return result;
   }
 
   /**
    * 删除Host配置
    */
   static async delete(id) {
-    const sql = 'DELETE FROM host_configs WHERE id = ?';
-    await db.run(sql, [id]);
+    return await jsonStore.delete('host_configs', id);
   }
 
   /**
    * 获取所有Host列表（用于冲突检测）
    */
   static async getAllHosts(excludeId = null) {
-    let sql = 'SELECT id, hosts FROM host_configs';
-    const params = [];
+    const where = excludeId !== null ? { id: { $ne: excludeId } } : undefined;
 
-    if (excludeId) {
-      sql += ' WHERE id != ?';
-      params.push(excludeId);
+    // json-store 不支持 $ne 操作符，需要手动过滤
+    let hostConfigs = await jsonStore.findAll('host_configs', {});
+    if (excludeId !== null) {
+      hostConfigs = hostConfigs.filter(hc => hc.id !== excludeId);
     }
 
-    const rows = await db.all(sql, params);
     const allHosts = [];
-    rows.forEach(row => {
-      const hosts = JSON.parse(row.hosts);
+    hostConfigs.forEach(row => {
+      const hosts = typeof row.hosts === 'string' ? JSON.parse(row.hosts) : row.hosts;
       hosts.forEach(host => {
         allHosts.push({ configId: row.id, host });
       });
     });
+
     return allHosts;
   }
 }
 
 module.exports = HostConfigModel;
-
-

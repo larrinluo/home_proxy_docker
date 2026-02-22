@@ -3,6 +3,25 @@ set -e
 
 echo "=== Starting container initialization ==="
 
+# 重新编译sqlite3 native模块（确保与当前架构兼容）
+echo "Rebuilding sqlite3 native module for current architecture..."
+if [ ! -f /app/node_modules/sqlite3/build/Release/node_sqlite3.node ] || \
+   [ /app/node_modules/sqlite3/build/Release/node_sqlite3.node -ot /app/node_modules/sqlite3/binding.gyp ]; then
+    echo "Installing build dependencies and rebuilding sqlite3..."
+    apt-get update && \
+    apt-get install -y --no-install-recommends python3 make g++ build-essential libsqlite3-dev && \
+    cd /app && \
+    npm rebuild sqlite3 --build-from-source && \
+    cd / && \
+    apt-get remove -y python3 make g++ build-essential libsqlite3-dev && \
+    apt-get autoremove -y && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+    echo "sqlite3 rebuild completed"
+else
+    echo "sqlite3 native module already built, skipping rebuild"
+fi
+
 # 初始化数据库（如果不存在）
 if [ ! -f /data/database/database.db ]; then
     echo "Initializing database..."

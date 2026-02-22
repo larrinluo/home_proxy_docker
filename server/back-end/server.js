@@ -3,12 +3,10 @@ const cors = require('cors');
 const helmet = require('helmet');
 const morgan = require('morgan');
 const session = require('express-session');
-const SQLiteStore = require('connect-sqlite3')(session);
 const path = require('path');
 require('dotenv').config();
 
-const db = require('./db/index');
-const { initDatabase } = require('./scripts/init-db');
+const jsonStore = require('./db/json-store');
 const proxyStatusMonitor = require('./services/proxy-status-monitor');
 const { getFullVersionInfo } = require('./utils/version');
 
@@ -79,12 +77,12 @@ app.use(cors({
     }
     
     // 开发环境：允许所有来源
-    if (process.env.NODE_ENV === 'development') {
+      if (process.env.NODE_ENV === 'development') {
       return callback(null, true);
     }
     
     // 其他情况：拒绝
-    callback(new Error('Not allowed by CORS'));
+        callback(new Error('Not allowed by CORS'));
   },
   credentials: true
 }));
@@ -92,7 +90,7 @@ app.use(morgan('dev'));
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
-// Session配置
+// Session配置（使用内存存储）
 // secure: 如果使用 HTTPS，设置为 true；如果使用 HTTP，设置为 false
 // 可以通过环境变量 SESSION_SECURE 显式控制（'true' 或 'false'）
 // 如果没有设置 SESSION_SECURE，则根据 PROXY_PROTOCOL 判断（'https' 时使用 true）
@@ -101,33 +99,7 @@ const isSecure = process.env.SESSION_SECURE !== undefined
   ? process.env.SESSION_SECURE === 'true'
   : (process.env.PROXY_PROTOCOL === 'https');
 
-// SQLiteStore配置
-// 延迟初始化SQLiteStore，使用dir+db方式，让SQLiteStore在需要时再打开数据库
-// connect-sqlite3支持两种方式：
-// 1. db: 完整路径（立即打开）
-// 2. dir + db: 目录和文件名（延迟打开）
-// 本地开发环境使用相对路径，生产环境使用绝对路径
-const dbPath = process.env.DB_PATH || (process.env.NODE_ENV === 'development' 
-  ? './data/database/database.db' 
-  : '/data/database/database.db');
-const resolvedDbPath = path.isAbsolute(dbPath) ? dbPath : path.resolve(process.cwd(), dbPath);
-const sessionStoreOptions = {
-  dir: path.dirname(resolvedDbPath),
-  db: path.basename(resolvedDbPath),
-  table: 'sessions'
-};
-
-let sessionStore;
-try {
-  sessionStore = new SQLiteStore(sessionStoreOptions);
-} catch (storeErr) {
-  console.error('Error creating SQLiteStore:', storeErr);
-  // 如果SQLiteStore创建失败，使用内存session store作为fallback
-  console.warn('Falling back to memory session store');
-  sessionStore = null; // 使用默认的MemoryStore
-}
 app.use(session({
-  store: sessionStore || undefined,
   secret: process.env.SESSION_SECRET || 'your-secret-key-here-change-in-production',
   resave: false,
   saveUninitialized: false,
@@ -164,22 +136,14 @@ app.get('/ready', async (req, res) => {
       services: true
     };
 
-    // 检查数据库连接
+    // 检查 JSON 数据存储
     try {
-      // 确保数据库连接已打开
-      if (db.ensureOpen && !db.db) {
-        await db.ensureOpen();
-      }
-      if (db.db) {
-        await db.get('SELECT 1');
-        checks.database = true;
-      }
+      // 尝试读取一个表来验证数据存储可用
+      await jsonStore.readTable('users');
+      checks.database = true;
     } catch (error) {
       console.error('Database check failed:', error);
     }
-
-    // 检查代理服务状态（可选）
-    // 这里可以添加更多的健康检查逻辑
 
     const isReady = checks.database && checks.services;
 
@@ -209,7 +173,7 @@ app.get('/ready', async (req, res) => {
 // 版本信息API
 app.get('/api/version', async (req, res) => {
   try {
-    const versionInfo = await getFullVersionInfo(db);
+    const versionInfo = await getFullVersionInfo(jsonStore);
     res.json({
       success: true,
       data: versionInfo
@@ -254,21 +218,16 @@ let server = null;
 
 async function startServer() {
   try {
-    // 确保数据库连接已打开
-    if (db.ensureOpen) {
-      await db.ensureOpen();
-    }
-    
-    // 初始化数据库（如果不存在）
-    await initDatabase();
-    console.log('Database initialized');
+    // 初始化 JSON 数据存储
+    await jsonStore.initialize();
+    console.log('JSON database initialized');
 
     // 启动服务器（监听所有网络接口）
     server = app.listen(PORT, '0.0.0.0', () => {
       console.log(`Server is running on http://0.0.0.0:${PORT}`);
       console.log(`Local: http://localhost:${PORT}`);
       console.log(`Network: http://192.168.2.4:${PORT}`);
-      
+
       // 启动代理服务状态监控（仅在非测试环境）
       if (process.env.NODE_ENV !== 'test') {
         proxyStatusMonitor.start();
@@ -335,15 +294,7 @@ async function gracefulShutdown(signal) {
       console.error('Error stopping proxy services:', error);
     }
 
-    // 5. 关闭数据库连接
-    try {
-      await db.close();
-      console.log('Database connection closed');
-    } catch (error) {
-      console.error('Error closing database:', error);
-    }
-
-    // 6. 清除定时器并退出
+    // 5. 清除定时器并退出
     clearTimeout(shutdownTimer);
     console.log('Graceful shutdown completed');
     process.exit(0);

@@ -34,10 +34,15 @@ class PACGenerator {
         return pacConfigCache;
       }
     }
+
+    console.log('[PAC Generator] Generating PAC config for proxyHost:', proxyHost);
+
     // 获取所有运行中的代理服务
     const runningServices = await ProxyServiceModel.findAll({ status: 'running' });
+    console.log('[PAC Generator] Running services:', runningServices.length, runningServices.map(s => ({ id: s.id, name: s.name, port: s.proxy_port })));
 
     if (runningServices.length === 0) {
+      console.log('[PAC Generator] No running services found, returning empty rules');
       return {
         proxyRules: [],
         direct: true
@@ -46,6 +51,16 @@ class PACGenerator {
 
     // 获取所有启用的Host配置
     const hostConfigs = await HostConfigModel.findAllWithProxyService({ enabled: true });
+    console.log('[PAC Generator] Host configs found:', hostConfigs.length);
+    hostConfigs.forEach((config, idx) => {
+      console.log(`[PAC Generator] Config ${idx}:`, {
+        name: config.name,
+        enabled: config.enabled,
+        proxyServiceStatus: config.proxyServiceStatus,
+        proxyServicePort: config.proxyServicePort,
+        hostsCount: Array.isArray(config.hosts) ? config.hosts.length : 0
+      });
+    });
 
     // 构建代理规则
     const proxyRules = [];

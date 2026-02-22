@@ -76,7 +76,8 @@ request.interceptors.response.use(
           // 这种情况下，静默跳转到登录页，不显示错误消息（避免与路由守卫冲突）
           router.push('/login');
         }
-        // 静默处理401错误，让调用方自己处理
+        // 将错误信息附加到error对象上，让调用方可以使用
+        error.errorMessage = data?.error?.message || '认证失败';
       } else if (status === 403) {
         if (!isSilent) {
           ElMessage.error('没有权限');

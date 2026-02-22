@@ -1,0 +1,32 @@
+# 强制使用本地ubuntu镜像
+FROM ubuntu@sha256:c3a134f2ace4 AS builder
+
+# 构建参数：支持HTTP代理配置
+ARG HTTP_PROXY
+ARG HTTPS_PROXY
+ARG NO_PROXY
+
+# 配置代理环境变量（如果提供）
+ENV HTTP_PROXY=${HTTP_PROXY}
+ENV HTTPS_PROXY=${HTTPS_PROXY}
+ENV NO_PROXY=${NO_PROXY}
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 先安装ca-certificates以支持HTTPS，然后配置Ubuntu镜像源（使用阿里云镜像加速）
+RUN apt-get update && apt-get install -y --no-install-recommends ca-certificates && \
+    if [ -f /etc/apt/sources.list.d/ubuntu.sources ]; then \
+        sed -i 's|http://archive.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list.d/ubuntu.sources && \
+        sed -i 's|https://archive.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list.d/ubuntu.sources && \
+        sed -i 's|http://security.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list.d/ubuntu.sources && \
+        sed -i 's|https://security.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list.d/ubuntu.sources; \
+    else \
+        sed -i 's|http://archive.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list && \
+        sed -i 's|https://archive.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list && \
+        sed -i 's|http://security.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list && \
+        sed -i 's|https://security.ubuntu.com|http://mirrors.aliyun.com|g' /etc/apt/sources.list; \
+    fi && \
+    apt-get clean && rm -rf /var/lib/apt/lists/*
+
+# 后续内容从原Dockerfile复制...
+# 这里只是个示例，实际上需要完整的Dockerfile内容
+# 让我使用更简单的方法

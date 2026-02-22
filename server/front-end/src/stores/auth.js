@@ -18,8 +18,17 @@ export const useAuthStore = defineStore('auth', () => {
         isAuthenticated.value = true;
         return { success: true };
       }
-      return { success: false, message: '登录失败' };
+      // 如果后端返回了错误信息，使用它
+      return { success: false, message: response.error?.message || '登录失败' };
     } catch (error) {
+      // 优先使用errorMessage（request拦截器设置）
+      if (error.errorMessage) {
+        return { success: false, message: error.errorMessage };
+      }
+      // 其次使用response中的错误信息
+      if (error.response?.data?.error?.message) {
+        return { success: false, message: error.response.data.error.message };
+      }
       return { success: false, message: error.message || '登录失败' };
     }
   }

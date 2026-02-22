@@ -13,6 +13,13 @@ class ProxyProcessManager {
    * @returns {Promise<{processId: number, command: string}>} 进程ID和命令
    */
   async startProcess(service) {
+    console.log(`\n[ProxyProcessManager] 开始启动autossh进程...`);
+    console.log(`  - 服务ID: ${service.id}`);
+    console.log(`  - 跳板服务器: ${service.jumpHost}:${service.jumpPort}`);
+    console.log(`  - 用户名: ${service.jumpUsername}`);
+    console.log(`  - 代理端口: ${service.proxyPort}`);
+    console.log(`  - SSH密钥路径: ${service.sshKeyPath}`);
+
     const {
       id,
       jumpHost,
@@ -27,14 +34,17 @@ class ProxyProcessManager {
     // 如果路径是绝对路径，直接使用；否则尝试多个可能的路径
     const path = require('path');
     let absoluteSshKeyPath = null;
-    
+
+    console.log(`\n[ProxyProcessManager] 步骤 1/4: 解析SSH密钥路径...`);
     if (path.isAbsolute(sshKeyPath)) {
       absoluteSshKeyPath = sshKeyPath;
+      console.log(`  - 已是绝对路径: ${absoluteSshKeyPath}`);
     } else {
+      console.log(`  - 相对路径，尝试解析...`);
       // 尝试多个可能的路径
       const possiblePaths = [
-        // Docker容器中的标准路径
-        path.join('/data/ssh-keys', sshKeyPath),
+        // Docker容器中的标准路径 - 只取basename避免重复路径
+        path.join('/data/ssh-keys', path.basename(sshKeyPath)),
         // 相对于项目根目录的路径
         path.resolve(__dirname, '..', '..', sshKeyPath),
         // 相对于当前文件的路径
@@ -42,56 +52,77 @@ class ProxyProcessManager {
         // 如果sshKeyPath已经包含data/ssh-keys，直接解析
         path.resolve(__dirname, '..', '..', 'data', 'ssh-keys', path.basename(sshKeyPath))
       ];
-      
+
+      console.log(`  - 尝试的路径:`);
+      possiblePaths.forEach((p, idx) => console.log(`    ${idx + 1}. ${p}`));
+
       // 检查哪个路径存在
-      for (const possiblePath of possiblePaths) {
+      for (let i = 0; i < possiblePaths.length; i++) {
+        const possiblePath = possiblePaths[i];
         try {
           await fs.access(possiblePath);
           absoluteSshKeyPath = possiblePath;
+          console.log(`  ✅ 使用路径 ${i + 1}: ${absoluteSshKeyPath}`);
           break;
         } catch (e) {
           // 继续尝试下一个路径
         }
       }
-      
+
       // 如果所有路径都不存在，使用第一个可能的路径（用于错误提示）
       if (!absoluteSshKeyPath) {
         absoluteSshKeyPath = possiblePaths[0];
+        console.log(`  ⚠️  所有路径都不存在，将使用第一个: ${absoluteSshKeyPath}`);
       }
     }
 
     // 验证SSH密钥文件是否存在
+    console.log(`\n[ProxyProcessManager] 步骤 2/4: 验证SSH密钥文件...`);
     try {
       await fs.access(absoluteSshKeyPath);
+      const stats = await fs.stat(absoluteSshKeyPath);
+      console.log(`  ✅ 密钥文件存在: ${absoluteSshKeyPath}`);
+      console.log(`  - 文件大小: ${(stats.size / 1024).toFixed(2)} KB`);
     } catch (error) {
       // 提供更详细的错误信息，包括尝试过的路径
       const errorMsg = `SSH密钥文件不存在或不可访问: ${absoluteSshKeyPath}`;
-      console.error(`[ProxyProcessManager] SSH key path resolution failed:`);
-      console.error(`  Original path: ${sshKeyPath}`);
-      console.error(`  Resolved path: ${absoluteSshKeyPath}`);
-      console.error(`  Error: ${error.message}`);
+      console.error(`  ❌ 文件验证失败`);
+      console.error(`    - 原始路径: ${sshKeyPath}`);
+      console.error(`    - 解析路径: ${absoluteSshKeyPath}`);
+      console.error(`    - 错误信息: ${error.message}`);
+      console.error(`\n  💡 可能的解决方案:`);
+      console.error(`    1. 检查密钥文件是否存在于 /data/ssh-keys/ 目录`);
+      console.error(`    2. 运行命令查看目录: ls -la /data/ssh-keys/`);
+      console.error(`    3. 确保密钥文件名正确`);
       throw new Error(errorMsg);
     }
-    
+
     // 验证文件权限（SSH要求私钥权限为600）
+    console.log(`\n[ProxyProcessManager] 步骤 3/4: 检查并修复文件权限...`);
     try {
       const stats = await fs.stat(absoluteSshKeyPath);
       const mode = stats.mode & parseInt('777', 8);
+      console.log(`  - 当前权限: ${mode.toString(8)} (八进制)`);
+
       if (mode !== parseInt('600', 8) && mode !== parseInt('400', 8)) {
-        console.warn(`[ProxyProcessManager] SSH key file permissions are ${mode.toString(8)}, should be 600 or 400`);
+        console.warn(`  ⚠️  权限不正确，应该是 600 或 400`);
         // 尝试修复权限
         try {
           await fs.chmod(absoluteSshKeyPath, 0o600);
-          console.log(`[ProxyProcessManager] Fixed SSH key file permissions to 600`);
+          console.log(`  ✅ 已自动修复权限为 600`);
         } catch (chmodError) {
-          console.warn(`[ProxyProcessManager] Failed to fix SSH key file permissions: ${chmodError.message}`);
+          console.warn(`  ❌ 无法自动修复权限: ${chmodError.message}`);
+          console.warn(`  💡 请手动运行: chmod 600 ${absoluteSshKeyPath}`);
         }
+      } else {
+        console.log(`  ✅ 权限正确`);
       }
     } catch (statError) {
-      console.warn(`[ProxyProcessManager] Failed to check SSH key file permissions: ${statError.message}`);
+      console.warn(`  ⚠️  无法检查文件权限: ${statError.message}`);
     }
 
     // 构建autossh命令
+    console.log(`\n[ProxyProcessManager] 步骤 4/4: 构建并启动autossh进程...`);
     // autossh -M 0 -N -o "ServerAliveInterval 60" -o "ServerAliveCountMax 3" 
     // -i <私钥路径> -D <绑定地址>:<本地端口> <用户名>@<跳板服务器>
     // -D 选项会在本地创建一个SOCKS5代理服务器

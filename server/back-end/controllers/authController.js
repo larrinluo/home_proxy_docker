@@ -99,7 +99,7 @@ async function login(req, res) {
     }
 
     // 验证密码
-    const isValidPassword = await bcrypt.compare(password, user.password_hash);
+    const isValidPassword = await bcrypt.compare(password, user.passwordHash);
     if (!isValidPassword) {
       return res.status(401).json({
         success: false,
@@ -202,7 +202,7 @@ async function getMe(req, res) {
         id: user.id,
         username: user.username,
         email: user.email,
-        created_at: user.created_at
+        createdAt: user.created_at || user.createdAt
       }
     });
   } catch (error) {

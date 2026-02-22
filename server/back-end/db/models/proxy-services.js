@@ -1,4 +1,4 @@
-const db = require('../index');
+const jsonStore = require('../json-store');
 
 /**
  * 代理服务模型
@@ -18,29 +18,24 @@ class ProxyServiceModel {
       status = 'stopped'
     } = serviceData;
 
-    const sql = `
-      INSERT INTO proxy_services 
-      (name, jump_host, jump_port, jump_username, proxy_port, ssh_key_path, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?)
-    `;
-    const result = await db.run(sql, [
+    const result = await jsonStore.insert('proxy_services', {
       name,
-      jumpHost,
-      jumpPort || 22,
-      jumpUsername,
-      proxyPort,
-      sshKeyPath,
+      jump_host: jumpHost,
+      jump_port: jumpPort || 22,
+      jump_username: jumpUsername,
+      proxy_port: proxyPort,
+      ssh_key_path: sshKeyPath,
       status
-    ]);
-    return this.findById(result.lastID);
+    });
+
+    return result;
   }
 
   /**
    * 根据ID查找代理服务
    */
   static async findById(id) {
-    const sql = 'SELECT * FROM proxy_services WHERE id = ?';
-    return await db.get(sql, [id]);
+    return await jsonStore.findById('proxy_services', id);
   }
 
   /**
@@ -48,23 +43,21 @@ class ProxyServiceModel {
    */
   static async findAll(options = {}) {
     const { status, page, pageSize, sortBy = 'created_at', sortOrder = 'DESC' } = options;
-    let sql = 'SELECT * FROM proxy_services';
-    const params = [];
 
-    if (status) {
-      sql += ' WHERE status = ?';
-      params.push(status);
-    }
+    const where = status !== undefined ? { status } : undefined;
 
-    sql += ` ORDER BY ${sortBy} ${sortOrder}`;
+    const limit = pageSize;
+    const offset = page && pageSize ? (page - 1) * pageSize : undefined;
 
-    if (page && pageSize) {
-      const offset = (page - 1) * pageSize;
-      sql += ' LIMIT ? OFFSET ?';
-      params.push(pageSize, offset);
-    }
+    const result = await jsonStore.findAll('proxy_services', {
+      where,
+      orderBy: sortBy,
+      order: sortOrder,
+      limit,
+      offset
+    });
 
-    return await db.all(sql, params);
+    return result;
   }
 
   /**
@@ -72,24 +65,18 @@ class ProxyServiceModel {
    */
   static async count(options = {}) {
     const { status } = options;
-    let sql = 'SELECT COUNT(*) as count FROM proxy_services';
-    const params = [];
-
-    if (status) {
-      sql += ' WHERE status = ?';
-      params.push(status);
-    }
-
-    const result = await db.get(sql, params);
-    return result.count;
+    const where = status !== undefined ? { status } : undefined;
+    return await jsonStore.count('proxy_services', { where });
   }
 
   /**
    * 根据代理端口查找
    */
   static async findByProxyPort(proxyPort) {
-    const sql = 'SELECT * FROM proxy_services WHERE proxy_port = ?';
-    return await db.get(sql, [proxyPort]);
+    const services = await jsonStore.findAll('proxy_services', {
+      where: { proxy_port: proxyPort }
+    });
+    return services.length > 0 ? services[0] : null;
   }
 
   /**
@@ -107,69 +94,46 @@ class ProxyServiceModel {
       processId
     } = serviceData;
 
-    const updates = [];
-    const params = [];
+    const updateData = {};
 
     if (name !== undefined) {
-      updates.push('name = ?');
-      params.push(name);
+      updateData.name = name;
     }
     if (jumpHost !== undefined) {
-      updates.push('jump_host = ?');
-      params.push(jumpHost);
+      updateData.jump_host = jumpHost;
     }
     if (jumpPort !== undefined) {
-      updates.push('jump_port = ?');
-      params.push(jumpPort);
+      updateData.jump_port = jumpPort;
     }
     if (jumpUsername !== undefined) {
-      updates.push('jump_username = ?');
-      params.push(jumpUsername);
+      updateData.jump_username = jumpUsername;
     }
     if (proxyPort !== undefined) {
-      updates.push('proxy_port = ?');
-      params.push(proxyPort);
+      updateData.proxy_port = proxyPort;
     }
     if (sshKeyPath !== undefined) {
-      updates.push('ssh_key_path = ?');
-      params.push(sshKeyPath);
+      updateData.ssh_key_path = sshKeyPath;
     }
     if (status !== undefined) {
-      updates.push('status = ?');
-      params.push(status);
+      updateData.status = status;
     }
     if (processId !== undefined) {
-      updates.push('process_id = ?');
-      params.push(processId);
+      updateData.process_id = processId;
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(updateData).length === 0) {
       return this.findById(id);
     }
 
-    updates.push('updated_at = CURRENT_TIMESTAMP');
-    params.push(id);
-
-    const sql = `UPDATE proxy_services SET ${updates.join(', ')} WHERE id = ?`;
-    await db.run(sql, params);
-    return this.findById(id);
+    return await jsonStore.update('proxy_services', id, updateData);
   }
 
   /**
    * 删除代理服务
    */
   static async delete(id) {
-    const sql = 'DELETE FROM proxy_services WHERE id = ?';
-    await db.run(sql, [id]);
+    return await jsonStore.delete('proxy_services', id);
   }
 }
 
 module.exports = ProxyServiceModel;
-
-
-
-
-
-
-
-

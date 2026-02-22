@@ -187,16 +187,18 @@ if [ "$RUN_CONTAINER" = true ]; then
     echo ""
     echo -e "${YELLOW}Starting container...${NC}"
     
-    # 停止并删除旧容器（如果存在）
+    # 检查是否存在旧容器
+    OLD_CONTAINER_EXISTS=false
+    TEMP_CONTAINER_NAME="${CONTAINER_NAME}-new-$$"
     if docker ps -a --format '{{.Names}}' | grep -q "^${CONTAINER_NAME}$"; then
-        echo "Stopping existing container..."
-        docker stop "$CONTAINER_NAME" > /dev/null 2>&1 || true
-        docker rm "$CONTAINER_NAME" > /dev/null 2>&1 || true
+        OLD_CONTAINER_EXISTS=true
+        echo "Found existing container: ${CONTAINER_NAME}"
+        echo "Will use temporary name for new container: ${TEMP_CONTAINER_NAME}"
     fi
     
-    # 启动新容器
+    # 启动新容器（使用临时名称，避免与旧容器冲突）
     docker run -d \
-        --name "$CONTAINER_NAME" \
+        --name "$TEMP_CONTAINER_NAME" \
         -p "$PROXY_PORT:8090" \
         -p 11081:11081 \
         -p 11082:11082 \
@@ -212,7 +214,20 @@ if [ "$RUN_CONTAINER" = true ]; then
         "$IMAGE_NAME:$IMAGE_TAG"
     
     if [ $? -eq 0 ]; then
-        echo -e "${GREEN}Container started successfully!${NC}"
+        echo -e "${GREEN}New container started successfully!${NC}"
+        
+        # 新容器启动成功，现在可以安全删除旧容器并重命名新容器
+        if [ "$OLD_CONTAINER_EXISTS" = true ]; then
+            echo "Stopping and removing old container..."
+            docker stop "$CONTAINER_NAME" > /dev/null 2>&1 || true
+            docker rm "$CONTAINER_NAME" > /dev/null 2>&1 || true
+            
+            echo "Renaming new container to ${CONTAINER_NAME}..."
+            docker rename "$TEMP_CONTAINER_NAME" "$CONTAINER_NAME"
+        else
+            # 如果没有旧容器，直接重命名
+            docker rename "$TEMP_CONTAINER_NAME" "$CONTAINER_NAME"
+        fi
         echo ""
         echo -e "${GREEN}=== Container Information ===${NC}"
         echo "  Container Name: $CONTAINER_NAME"
@@ -233,7 +248,21 @@ if [ "$RUN_CONTAINER" = true ]; then
         echo ""
         echo "To view mounts: docker inspect $CONTAINER_NAME --format '{{range .Mounts}}{{printf \"%-50s -> %s\\n\" .Source .Destination}}{{end}}'"
     else
-        echo -e "${RED}Failed to start container!${NC}"
+        echo -e "${RED}Failed to start new container!${NC}"
+        
+        # 清理临时容器
+        docker rm "$TEMP_CONTAINER_NAME" > /dev/null 2>&1 || true
+        
+        # 新容器启动失败，尝试恢复旧容器
+        if [ "$OLD_CONTAINER_EXISTS" = true ]; then
+            echo -e "${YELLOW}Attempting to restart old container...${NC}"
+            docker start "$CONTAINER_NAME" > /dev/null 2>&1
+            if [ $? -eq 0 ]; then
+                echo -e "${GREEN}Old container restored successfully!${NC}"
+            else
+                echo -e "${RED}Failed to restore old container. Manual intervention required.${NC}"
+            fi
+        fi
         exit 1
     fi
 fi

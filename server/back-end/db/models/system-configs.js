@@ -1,61 +1,88 @@
-const db = require('../index');
+const jsonStore = require('../json-store');
 
 /**
  * 系统配置模型
  */
 class SystemConfigModel {
   /**
-   * 创建或更新系统配置
+   * 创建或更新系统配置（UPSERT）
    */
   static async upsert(configData) {
     const { key, value, description } = configData;
-    const sql = `
-      INSERT INTO system_configs (key, value, description)
-      VALUES (?, ?, ?)
-      ON CONFLICT(key) DO UPDATE SET
-        value = excluded.value,
-        description = excluded.description,
-        updated_at = CURRENT_TIMESTAMP
-    `;
-    await db.run(sql, [key, value, description || null]);
-    return this.findByKey(key);
+
+    // 查找是否已存在
+    const existing = await this.findByKey(key);
+
+    if (existing) {
+      // 更新
+      const updateData = {
+        value,
+        updated_at: new Date().toISOString()
+      };
+
+      if (description !== undefined) {
+        updateData.description = description;
+      }
+
+      return await jsonStore.update('system_configs', existing.id, updateData);
+    } else {
+      // 插入
+      return await jsonStore.insert('system_configs', {
+        key,
+        value,
+        description: description || null
+      });
+    }
   }
 
   /**
    * 根据key查找配置
    */
   static async findByKey(key) {
-    const sql = 'SELECT * FROM system_configs WHERE key = ?';
-    return await db.get(sql, [key]);
+    const configs = await jsonStore.findAll('system_configs', {
+      where: { key }
+    });
+    return configs.length > 0 ? configs[0] : null;
   }
 
   /**
    * 获取所有系统配置
    */
   static async findAll() {
-    const sql = 'SELECT * FROM system_configs ORDER BY key';
-    return await db.all(sql);
+    return await jsonStore.findAll('system_configs', {
+      orderBy: 'key',
+      order: 'ASC'
+    });
   }
 
   /**
    * 更新配置值
    */
   static async update(key, value) {
-    const sql = `
-      UPDATE system_configs 
-      SET value = ?, updated_at = CURRENT_TIMESTAMP 
-      WHERE key = ?
-    `;
-    await db.run(sql, [value, key]);
-    return this.findByKey(key);
+    const config = await this.findByKey(key);
+
+    if (!config) {
+      throw new Error(`Config not found: ${key}`);
+    }
+
+    const result = await jsonStore.update('system_configs', config.id, {
+      value
+    });
+
+    return result;
   }
 
   /**
    * 删除配置
    */
   static async delete(key) {
-    const sql = 'DELETE FROM system_configs WHERE key = ?';
-    await db.run(sql, [key]);
+    const config = await this.findByKey(key);
+
+    if (!config) {
+      return;
+    }
+
+    return await jsonStore.delete('system_configs', config.id);
   }
 
   /**
@@ -63,9 +90,11 @@ class SystemConfigModel {
    */
   static async getBoolean(key, defaultValue = false) {
     const config = await this.findByKey(key);
+
     if (!config) {
       return defaultValue;
     }
+
     return config.value === 'true' || config.value === '1';
   }
 
@@ -78,11 +107,3 @@ class SystemConfigModel {
 }
 
 module.exports = SystemConfigModel;
-
-
-
-
-
-
-
-

@@ -1,4 +1,4 @@
-const db = require('../index');
+const jsonStore = require('../json-store');
 
 /**
  * 用户模型
@@ -9,36 +9,39 @@ class UserModel {
    */
   static async create(userData) {
     const { username, passwordHash, email } = userData;
-    const sql = `
-      INSERT INTO users (username, password_hash, email)
-      VALUES (?, ?, ?)
-    `;
-    const result = await db.run(sql, [username, passwordHash, email || null]);
-    return this.findById(result.lastID);
+    const result = await jsonStore.insert('users', {
+      username,
+      password_hash: passwordHash,
+      email
+    });
+    return result;
   }
 
   /**
    * 根据ID查找用户
    */
   static async findById(id) {
-    const sql = 'SELECT * FROM users WHERE id = ?';
-    return await db.get(sql, [id]);
+    return await jsonStore.findById('users', id);
   }
 
   /**
    * 根据用户名查找用户
    */
   static async findByUsername(username) {
-    const sql = 'SELECT * FROM users WHERE username = ?';
-    return await db.get(sql, [username]);
+    const users = await jsonStore.findAll('users', {
+      where: { username }
+    });
+    return users.length > 0 ? users[0] : null;
   }
 
   /**
    * 根据邮箱查找用户
    */
   static async findByEmail(email) {
-    const sql = 'SELECT * FROM users WHERE email = ?';
-    return await db.get(sql, [email]);
+    const users = await jsonStore.findAll('users', {
+      where: { email }
+    });
+    return users.length > 0 ? users[0] : null;
   }
 
   /**
@@ -46,57 +49,46 @@ class UserModel {
    */
   static async update(id, userData) {
     const { username, passwordHash, email } = userData;
-    const updates = [];
-    const params = [];
+    const updateData = {};
 
     if (username !== undefined) {
-      updates.push('username = ?');
-      params.push(username);
+      updateData.username = username;
     }
     if (passwordHash !== undefined) {
-      updates.push('password_hash = ?');
-      params.push(passwordHash);
+      updateData.password_hash = passwordHash;
     }
     if (email !== undefined) {
-      updates.push('email = ?');
-      params.push(email);
+      updateData.email = email;
     }
 
-    if (updates.length === 0) {
+    if (Object.keys(updateData).length === 0) {
       return this.findById(id);
     }
 
-    updates.push('updated_at = CURRENT_TIMESTAMP');
-    params.push(id);
-
-    const sql = `UPDATE users SET ${updates.join(', ')} WHERE id = ?`;
-    await db.run(sql, params);
-    return this.findById(id);
+    return await jsonStore.update('users', id, updateData);
   }
 
   /**
    * 删除用户
    */
   static async delete(id) {
-    const sql = 'DELETE FROM users WHERE id = ?';
-    await db.run(sql, [id]);
+    return await jsonStore.delete('users', id);
   }
 
   /**
    * 获取所有用户
    */
   static async findAll() {
-    const sql = 'SELECT id, username, email, created_at, updated_at FROM users';
-    return await db.all(sql);
+    const users = await jsonStore.findAll('users');
+    // 只返回非敏感字段
+    return users.map(user => ({
+      id: user.id,
+      username: user.username,
+      email: user.email,
+      createdAt: user.createdAt,
+      updatedAt: user.updatedAt
+    }));
   }
 }
 
 module.exports = UserModel;
-
-
-
-
-
-
-
-
