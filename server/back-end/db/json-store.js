@@ -123,10 +123,11 @@ class JsonStore {
 
   /**
    * 写入表数据（原子写入 + 清除缓存）
+   * 注意：在某些 Docker 环境中，fs.rename() 可能失败
+   * 这里使用直接写入 + fsync 来确保数据完整性
    */
   async writeTable(table, rows) {
     const filePath = this.getTablePath(table);
-    const tmpPath = filePath + '.tmp';
     const backupPath = path.join(DB_DIR, '.backup', path.basename(filePath));
 
     try {
@@ -141,23 +142,22 @@ class JsonStore {
         // 文件不存在，忽略
       }
 
-      // 写入临时文件
-      await fs.writeFile(tmpPath, JSON.stringify(rows, null, 2), 'utf8');
-
-      // 原子重命名
-      await fs.rename(tmpPath, filePath);
+      // 直接写入文件（不使用临时文件 + rename）
+      // 这在某些文件系统上更可靠
+      const data = JSON.stringify(rows, null, 2);
+      const fd = await fs.open(filePath, 'w', 0o644);
+      try {
+        await fd.write(data, 0, 'utf8');
+        await fd.sync(); // 确保数据写入磁盘
+      } finally {
+        await fd.close();
+      }
 
       // 清除缓存（确保下次读取时从文件加载最新数据）
       this.cache.delete(table);
 
       return true;
     } catch (error) {
-      // 清理临时文件
-      try {
-        await fs.unlink(tmpPath);
-      } catch (err) {
-        // 忽略
-      }
       throw error;
     }
   }

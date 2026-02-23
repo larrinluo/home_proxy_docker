@@ -1,27 +1,38 @@
 # Dependencies
 node_modules/
 package-lock.json
+yarn.lock
 
 # Build outputs
 dist/
 build/
-*.log
 
-# Database files
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Database files (JSON storage)
+data/database/*.json
+data/database/.backup/
+data-arm64/
+
+# SQLite database files (if used)
 *.db
+*.db-shm
+*.db-wal
 *.sqlite
 *.sqlite3
-data/database.db
-data/test-database.db
-server/back-end/data/database.db
-server/back-end/data/test-database.db
 
-# SSH keys
+# SSH keys - NEVER commit these
+data/ssh-keys/
 server/back-end/data/ssh-keys/
 *.pem
 *.key
-*.pub
 !*.pub.example
+*.pub
 
 # Environment variables
 .env
@@ -31,11 +42,10 @@ server/back-end/data/ssh-keys/
 # IDE
 .vscode/
 .idea/
+.cursor/
 *.swp
 *.swo
 *~
-
-# OS
 .DS_Store
 Thumbs.db
 
@@ -45,70 +55,26 @@ coverage/
 .nyc_output/
 
 # Test reports
-reports/test-report.html
-reports/test-report.json
+reports/
+*.test-report.*
 
 # Temporary files
 tmp/
 temp/
 *.tmp
 
-# Logs
-logs/
-*.log
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
 # Docker
 docker-compose.override.yml
 
-server/front-end/dist/index.html
-server/front-end/dist/assets/_plugin-vue_export-helper-DlAUqK2U.js
-server/front-end/dist/assets/_plugin-vue_export-helper-DlAUqK2U.js.map
-server/front-end/dist/assets/Dashboard-DpryvRyP.css
-server/front-end/dist/assets/Dashboard-uv49sfxC.js
-server/front-end/dist/assets/Dashboard-uv49sfxC.js.map
-server/front-end/dist/assets/index-BAyvp1nm.css
-server/front-end/dist/assets/index-v6ciEjmk.js
-server/front-end/dist/assets/index-v6ciEjmk.js.map
-server/front-end/dist/assets/Login-C0JPjfGd.css
-server/front-end/dist/assets/Login-XZgBGlzb.js
-server/front-end/dist/assets/Login-XZgBGlzb.js.map
-server/front-end/dist/assets/Main-BEEhe-Kg.css
-server/front-end/dist/assets/Main-bfRHEVz3.js
-server/front-end/dist/assets/Main-bfRHEVz3.js.map
-server/front-end/dist/assets/Profile-BiKsbFgz.css
-server/front-end/dist/assets/Profile-DE9Zva7D.js
-server/front-end/dist/assets/Profile-DE9Zva7D.js.map
-server/front-end/dist/assets/Register-DmkLicE-.js
-server/front-end/dist/assets/Register-DmkLicE-.js.map
-server/front-end/dist/assets/Register-fp9m1lRT.css
-server/front-end/dist/assets/system-configs-DvebSRnr.js
-server/front-end/dist/assets/system-configs-DvebSRnr.js.map
-server/front-end/dist/assets/SystemConfig-2hm4GeaM.css
-server/front-end/dist/assets/SystemConfig-B_GWgEwM.js
-server/front-end/dist/assets/SystemConfig-B_GWgEwM.js.map
-server/front-end/dist/data/default-hosts.json
+# Build artifacts
+server/front-end/dist/
+server/front-end/node_modules/
 
-data/default-hosts.json
-data/database/database.db-shm
-data/database/database.db-wal
-data/database/test_app_1766392566.txt
-data/database/test_mount.txt
-data/default-hosts.json
-data/database/host_configs.json
-data/database/proxy_services.json
-data/database/system_configs.json
-data/database/users.json
-data/database/.backup/host_configs.json
-data/database/.backup/proxy_services.json
-data/database/.backup/system_configs.json
-data/database/.backup/users.json
-data-arm64/database/host_configs.json
-data-arm64/database/proxy_services.json
-data-arm64/database/system_configs.json
-data-arm64/database/users.json
-data-arm64/database/.backup/proxy_services.json
-data-arm64/ssh-keys/proxy_1766554049069_11081
-data-arm64/ssh-keys/proxy_1766554157826_11082
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db

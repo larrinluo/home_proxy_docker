@@ -3,61 +3,30 @@ set -e
 
 echo "=== Starting container initialization ==="
 
-# 重新编译sqlite3 native模块（确保与当前架构兼容）
-echo "Rebuilding sqlite3 native module for current architecture..."
-if [ ! -f /app/node_modules/sqlite3/build/Release/node_sqlite3.node ] || \
-   [ /app/node_modules/sqlite3/build/Release/node_sqlite3.node -ot /app/node_modules/sqlite3/binding.gyp ]; then
-    echo "Installing build dependencies and rebuilding sqlite3..."
-    apt-get update && \
-    apt-get install -y --no-install-recommends python3 make g++ build-essential libsqlite3-dev && \
-    cd /app && \
-    npm rebuild sqlite3 --build-from-source && \
-    cd / && \
-    apt-get remove -y python3 make g++ build-essential libsqlite3-dev && \
-    apt-get autoremove -y && \
-    apt-get clean && \
-    rm -rf /var/lib/apt/lists/*
-    echo "sqlite3 rebuild completed"
-else
-    echo "sqlite3 native module already built, skipping rebuild"
-fi
-
-# 初始化数据库（如果不存在）
-if [ ! -f /data/database/database.db ]; then
-    echo "Initializing database..."
-    if DB_PATH=/data/database/database.db node /app/scripts/init-db.js; then
-        echo "Database initialized successfully"
-    else
-        echo "Warning: Database initialization failed, but continuing..."
-    fi
-else
-    echo "Database already exists, skipping initialization"
-fi
-
-# 执行数据库迁移
-if [ -d /app/migrations ]; then
-    echo "Running database migrations..."
-    DB_PATH=/data/database/database.db node /app/scripts/migrate.js
-    echo "Database migrations completed"
-fi
-
 # 设置数据库目录权限（确保appuser可以读写）
-echo "Setting database directory permissions..."
+# 项目使用 JSON 文件存储，不需要 SQLite
+echo "Setting up data directory..."
 chmod 755 /data/database
-if [ -f /data/database/database.db ]; then
-    # 设置文件权限为 664（所有者可读写，组可读写，其他可读）
-    chmod 664 /data/database/database.db
-    # 尝试设置所有者为 appuser，如果失败则保持原所有者（可能是宿主机用户）
-    chown appuser:appuser /data/database/database.db 2>/dev/null || \
-    chown $(stat -c '%U:%G' /data/database/database.db) /data/database/database.db 2>/dev/null || true
-    # 确保文件不是只读的
-    chattr -i /data/database/database.db 2>/dev/null || true
+chown appuser:appuser /data/database 2>/dev/null || true
+
+# 创建默认的 JSON 数据文件（如果不存在）并修复权限
+echo "Initializing JSON data files..."
+for table in users.json proxy_services.json host_configs.json system_configs.json; do
+    if [ ! -f "/data/database/$table" ]; then
+        echo "  Creating $table..."
+        echo "[]" > "/data/database/$table"
+    fi
+    # 确保文件所有者是 appuser（即使文件已存在）
+    chown appuser:appuser "/data/database/$table" 2>/dev/null || true
+    chmod 664 "/data/database/$table" 2>/dev/null || true
+done
+echo "JSON data files initialized"
+
+# 修复 .backup 目录权限
+if [ -d "/data/database/.backup" ]; then
+    chown -R appuser:appuser "/data/database/.backup" 2>/dev/null || true
+    chmod -R 755 "/data/database/.backup" 2>/dev/null || true
 fi
-# 尝试设置目录所有者为 appuser，如果失败则保持原所有者
-chown appuser:appuser /data/database 2>/dev/null || \
-chown $(stat -c '%U:%G' /data/database) /data/database 2>/dev/null || true
-# 确保目录可写（755：所有者可读写执行，组和其他可读执行）
-chmod 755 /data/database
 
 # 清理 /app/data 目录中的旧数据库文件（如果存在）
 # 这些文件可能是之前构建时留下的，不应该使用

@@ -1,3 +1,6 @@
+# ==================== 生产优化版 Dockerfile ====================
+# 此版本跳过所有测试依赖，仅构建生产环境所需文件
+
 # ==================== 构建阶段 ====================
 FROM ubuntu:latest AS builder
 
@@ -83,10 +86,12 @@ RUN if [ -n "$HTTP_PROXY" ]; then \
 
 WORKDIR /build
 
-# 复制前端项目
-COPY server/front-end/package*.json ./front-end/
+# ==================== 前端构建（仅生产依赖）====================
+# 创建临时的 package.json，仅包含生产依赖
+COPY server/front-end/package.json ./front-end/
 WORKDIR /build/front-end
-# 使用 npm install 安装依赖（配置并发数和超时）
+
+# 使用 npm install 安装所有依赖，然后安装构建所需的开发依赖（vite, @vitejs/plugin-vue）
 # 注意：使用 npm install 而非 npm ci，因为 package-lock.json 被 .dockerignore 排除
 RUN npm install \
     --registry=https://registry.npmmirror.com \
@@ -97,11 +102,11 @@ RUN npm install \
 COPY server/front-end .
 RUN npm run build
 
-# 复制后端项目
+# ==================== 后端构建 ====================
 WORKDIR /build
 COPY server/back-end/package*.json ./back-end/
 WORKDIR /build/back-end
-# 使用 npm install 安装生产依赖（配置并发数和超时）
+# 使用 npm install 仅安装生产依赖，跳过测试依赖（jest, supertest）
 # 注意：使用 npm install 而非 npm ci，因为 package-lock.json 被 .dockerignore 排除
 RUN npm install --production \
     --registry=https://registry.npmmirror.com \
@@ -235,5 +240,3 @@ EXPOSE 8090 11081 11082 11083
 # 启动服务
 ENTRYPOINT ["/entrypoint.sh"]
 CMD ["supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
-
-
